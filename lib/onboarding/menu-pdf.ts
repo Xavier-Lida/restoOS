@@ -1,8 +1,26 @@
 import "server-only";
 
-import { PDFParse } from "pdf-parse";
-
 const PDF_MAGIC = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+
+type PdfParseNode = {
+  PDFParse: typeof import("pdf-parse").PDFParse;
+  CanvasFactory: typeof import("pdf-parse/worker").CanvasFactory;
+};
+
+let pdfParseNode: Promise<PdfParseNode> | undefined;
+
+async function loadPdfParseNode(): Promise<PdfParseNode> {
+  if (!pdfParseNode) {
+    pdfParseNode = (async () => {
+      const [{ CanvasFactory }, { PDFParse }] = await Promise.all([
+        import("pdf-parse/worker"),
+        import("pdf-parse"),
+      ]);
+      return { PDFParse, CanvasFactory };
+    })();
+  }
+  return pdfParseNode;
+}
 
 function assertPdfBuffer(buffer: Uint8Array): void {
   if (buffer.byteLength < 4 || !buffer.subarray(0, 4).every((b, i) => b === PDF_MAGIC[i])) {
@@ -10,12 +28,22 @@ function assertPdfBuffer(buffer: Uint8Array): void {
   }
 }
 
-export async function extractPlainTextFromPdfBuffer(buffer: ArrayBuffer): Promise<string> {
+export type ExtractPlainTextFromPdfOptions = {
+  /** Limite le nombre de pages lues (ex. scraping rapide). */
+  maxPages?: number;
+};
+
+export async function extractPlainTextFromPdfBuffer(
+  buffer: ArrayBuffer,
+  options?: ExtractPlainTextFromPdfOptions,
+): Promise<string> {
   const data = new Uint8Array(buffer);
   assertPdfBuffer(data);
-  const parser = new PDFParse({ data });
+  const { PDFParse, CanvasFactory } = await loadPdfParseNode();
+  const parser = new PDFParse({ data, CanvasFactory });
   try {
-    const result = await parser.getText();
+    const result =
+      options?.maxPages != null ? await parser.getText({ first: options.maxPages }) : await parser.getText();
     const text = (result.text ?? "").trim();
     if (!text) {
       throw new Error(

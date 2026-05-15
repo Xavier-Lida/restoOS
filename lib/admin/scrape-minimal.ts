@@ -1,8 +1,7 @@
 import "server-only";
 
-import { PDFParse } from "pdf-parse";
-
 import { isAnthropicConfigured } from "@/lib/admin/anthropic-env";
+import { extractPlainTextFromPdfBuffer } from "@/lib/onboarding/menu-pdf";
 import { extractMenuItemsWithLlm } from "@/lib/admin/scrape-llm";
 import { type MinimalScrapeItem, type ScrapeExtractionMeta } from "@/lib/admin/scrape-types";
 
@@ -134,14 +133,7 @@ function extractItemsFromPlainText(text: string): MinimalScrapeItem[] {
 }
 
 async function extractTextFromPdfBuffer(buffer: ArrayBuffer): Promise<string> {
-  const data = new Uint8Array(buffer);
-  const parser = new PDFParse({ data });
-  try {
-    const result = await parser.getText({ first: 15 });
-    return result.text ?? "";
-  } finally {
-    await parser.destroy();
-  }
+  return extractPlainTextFromPdfBuffer(buffer, { maxPages: 15 });
 }
 
 function buildPreviewWithMeta(text: string, meta: ScrapeExtractionMeta): string {

@@ -4,7 +4,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { DocumentBlockParam, ImageBlockParam, TextBlockParam } from "@anthropic-ai/sdk/resources/messages/messages";
 
 import { getAnthropicApiKey, getAnthropicModel } from "@/lib/admin/anthropic-env";
-import { extractPlainTextFromPdfBuffer } from "@/lib/onboarding/menu-pdf";
 
 const DEFAULT_MAX_TEXT_CHARS = 100_000;
 const DEFAULT_MIN_PDF_TEXT_CHARS = 80;
@@ -129,6 +128,7 @@ export async function runLlmDocumentJsonExtraction<T>(
   if (params.mimeType === "application/pdf") {
     let plain = "";
     try {
+      const { extractPlainTextFromPdfBuffer } = await import("@/lib/onboarding/menu-pdf");
       plain = await extractPlainTextFromPdfBuffer(params.buffer);
     } catch {
       plain = "";
