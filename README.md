@@ -12,6 +12,7 @@ MVP pour RestoPrix : SaaS d’aide à la fixation des prix pour restaurateurs (Q
 | `public/` | Assets statiques |
 | `supabase/` | Config projet / fonctions Edge (au besoin) |
 | `docs/sql/` | Schémas SQL à appliquer dans l’éditeur Supabase |
+| `docs/stats-charts-design.md` | Inventaire design des graphiques page Statistiques (`/dashboard/stats`) |
 | `PRD.MD` | Exigences produit et vision long terme |
 
 ## Prérequis

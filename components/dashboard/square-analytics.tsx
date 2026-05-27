@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { loadAcceptedSuggestionsGain } from "@/lib/dashboard/pricing-suggestions-stats";
 import { getRestoprixSubscriptionCad } from "@/lib/dashboard/subscription-cad";
 import {
+  computePeriodDelta,
   hasSquareReports,
   loadSquareDailyRevenue,
+  loadSquareDailyRevenuePrevious,
   summarizeSquareRevenue,
   type RevenueRange,
 } from "@/lib/square/dashboard";
@@ -23,7 +25,7 @@ export async function SquareAnalyticsSection({ userId, range }: SquareAnalyticsP
   const hasReports = await hasSquareReports(userId);
   if (!hasReports) {
     return (
-      <section className="flex flex-col gap-4 rounded-lg border border-dashed border-primary/20 bg-card p-6 text-card-foreground">
+      <section className="flex flex-col gap-4 rounded-xl border border-dashed border-primary/20 bg-card p-6 text-card-foreground">
         <div className="flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <BarChart3Icon className="size-5" />
@@ -31,8 +33,7 @@ export async function SquareAnalyticsSection({ userId, range }: SquareAnalyticsP
           <div className="flex flex-col gap-2">
             <h2 className="text-lg font-medium">Importe ton rapport Square pour activer les graphiques</h2>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Upload des CSV de récapitulatif des ventes Square pour visualiser l&apos;évolution de tes ventes dans
-              la section statistiques.
+              Upload des CSV de récapitulatif des ventes Square pour visualiser l&apos;évolution de tes ventes.
             </p>
             <div className="pt-2">
               <Button asChild>
@@ -45,16 +46,30 @@ export async function SquareAnalyticsSection({ userId, range }: SquareAnalyticsP
     );
   }
 
-  const [points, suggestions] = await Promise.all([
+  const [points, previousPoints, suggestions] = await Promise.all([
     loadSquareDailyRevenue(userId, range),
+    loadSquareDailyRevenuePrevious(userId, range),
     loadAcceptedSuggestionsGain(userId),
   ]);
   const summary = summarizeSquareRevenue(points);
+  const previousSummary = summarizeSquareRevenue(previousPoints);
   const subscriptionCad = getRestoprixSubscriptionCad();
 
+  const deltas = {
+    netSales: computePeriodDelta(summary.totalNetSales, previousSummary.totalNetSales),
+    avgDaily: computePeriodDelta(summary.averageDailyNet, previousSummary.averageDailyNet),
+    transactions: computePeriodDelta(summary.totalTransactions, previousSummary.totalTransactions),
+    taxes: computePeriodDelta(summary.totalTaxes, previousSummary.totalTaxes),
+  };
+
   return (
-    <div className="flex flex-col gap-6">
-      <SquareRevenueCard data={points} summary={summary} selectedRange={range} />
+    <div className="flex flex-col gap-10">
+      <SquareRevenueCard
+        data={points}
+        summary={summary}
+        selectedRange={range}
+        deltas={deltas}
+      />
       <RoiCard
         monthlyGainCad={suggestions.totalMonthlyGainCad}
         acceptedCount={suggestions.acceptedCount}

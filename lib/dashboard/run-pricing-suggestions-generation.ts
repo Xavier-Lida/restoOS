@@ -8,6 +8,7 @@ import {
   type MenuItemForPricing,
   type PricingSuggestionFilterStats,
 } from "@/lib/dashboard/generate-pricing-suggestions-llm";
+import { generatePricingSuggestionsWithF4 } from "@/lib/dashboard/generate-pricing-suggestions-f4";
 import {
   deletePendingPricingSuggestionsForUser,
   insertPricingSuggestions,
@@ -37,10 +38,6 @@ export type PricingGenerationResult =
     };
 
 export async function runPricingSuggestionsGeneration(): Promise<PricingGenerationResult> {
-  if (!isAnthropicConfigured()) {
-    return { ok: false, code: "missing_ai", message: "ANTHROPIC_API_KEY manquant." };
-  }
-
   const { supabase, user } = await getAuthedUser();
   const snapshot = await getOnboardingSnapshot(user.id);
   const menuItems: MenuItemForPricing[] = snapshot.menuItems.map((m) => ({
@@ -52,6 +49,63 @@ export async function runPricingSuggestionsGeneration(): Promise<PricingGenerati
 
   if (menuItems.length === 0) {
     return { ok: false, code: "no_menu", message: "Menu vide." };
+  }
+
+  const profile = snapshot.onboarding.dominant_profile ?? "securitaire";
+
+  // Progressive replacement: le profil Securitaire passe d’abord en déterministe (F4),
+  // même si la config IA n’est pas disponible.
+  if (profile === "securitaire") {
+    const generated = await generatePricingSuggestionsWithF4({
+      userId: user.id,
+      menuItems: snapshot.menuItems,
+      profile,
+    });
+
+    if (generated.suggestions.length === 0) {
+      return { ok: false, code: "no_suggestions", message: "Aucune suggestion F4 (A1) à générer." };
+    }
+
+    try {
+      await deletePendingPricingSuggestionsForUser(user.id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      if (isMissingPricingSuggestionsTableMessage(msg)) {
+        return { ok: false, code: "missing_table", message: msg };
+      }
+      throw e;
+    }
+
+    const rows = generated.suggestions.map((s) => ({
+      user_id: user.id,
+      menu_item_id: s.menu_item_id,
+      current_price_cad: s.current_price_cad,
+      suggested_price_cad: s.suggested_price_cad,
+      rationale: s.rationale,
+      estimated_monthly_gain_cad: s.estimated_monthly_gain_cad,
+      confidence: s.confidence,
+      model: s.model,
+      status: "pending" as const,
+    }));
+
+    try {
+      await insertPricingSuggestions(supabase, rows);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      if (isMissingPricingSuggestionsTableMessage(msg) || isLegacyPricingSuggestionsColumnMessage(msg)) {
+        return { ok: false, code: "missing_table", message: msg };
+      }
+      return { ok: false, code: "insert_failed", message: msg, detail: msg };
+    }
+
+    revalidatePath("/dashboard/pricing-suggestions");
+    revalidatePath("/dashboard/menu");
+    revalidatePath("/dashboard/stats");
+    return { ok: true, count: generated.suggestions.length };
+  }
+
+  if (!isAnthropicConfigured()) {
+    return { ok: false, code: "missing_ai", message: "ANTHROPIC_API_KEY manquant." };
   }
 
   const hasSquare = await hasSquareReports(user.id);

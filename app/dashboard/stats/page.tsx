@@ -1,24 +1,36 @@
 import Link from "next/link";
-import { BarChart3Icon } from "lucide-react";
 
 import { ClientInvoiceAnalyticsSection } from "@/components/dashboard/client-invoice-analytics-section";
-import { MenuChartsClient } from "@/components/dashboard/menu-charts.client";
 import { SquareAnalyticsSection } from "@/components/dashboard/square-analytics";
+import { StatsPeriodSwitch } from "@/components/dashboard/stats-period-switch.client";
+import {
+  MetaCell,
+  MetaStrip,
+  StatsChip,
+  StatsFooter,
+  StatsPageHeader,
+  StatsPageShell,
+  StatsSourceBlock,
+} from "@/components/dashboard/stats-premium-ui";
 import { Button } from "@/components/ui/button";
-import { buildMenuCategoryChartPoints } from "@/lib/dashboard/menu-charts";
+import { hasClientInvoices, loadClientInvoiceChartBundle } from "@/lib/dashboard/client-invoice-charts";
 import type { RevenueRange } from "@/lib/square/dashboard";
+import { hasSquareReports } from "@/lib/square/dashboard";
 import { profileOptions } from "@/lib/onboarding/constants";
 import { getAuthedUser, getOnboardingSnapshot } from "@/lib/onboarding/server";
-
-const mvpSteps = [
-  "Onboarding et import des ventes (Square CSV)",
-  "Detection et scraping des concurrents",
-  "Generation des suggestions de prix",
-  "Validation restaurateur puis mise a jour des prix",
-  "Export du menu en CSV et QR code",
-];
+import { PricingF3dSection } from "@/components/dashboard/pricing-engine/pricing-f3d-section";
+import { PricingF2Section } from "@/components/dashboard/pricing-engine/pricing-f2-section";
+import { PricingF3Section } from "@/components/dashboard/pricing-engine/pricing-f3-section";
+import { PricingF4Section } from "@/components/dashboard/pricing-engine/pricing-f4-section";
+import { loadSpmCompetitorRows } from "@/lib/dashboard/pricing-engine/f2-spm-competitors";
 
 const validRanges: ReadonlyArray<RevenueRange> = ["7d", "30d", "90d"];
+
+const rangeLabels: Record<RevenueRange, string> = {
+  "7d": "7 derniers jours",
+  "30d": "30 derniers jours",
+  "90d": "90 derniers jours",
+};
 
 function resolveRange(raw: string | string[] | undefined): RevenueRange {
   const candidate = Array.isArray(raw) ? raw[0] : raw;
@@ -35,89 +47,90 @@ export default async function DashboardStatsPage({ searchParams }: { searchParam
 
   const profileLabel =
     profileOptions.find((option) => option.value === snapshot.onboarding.dominant_profile)?.title ??
-    "Non defini";
+    "Non défini";
   const averagePrice =
     snapshot.menuItems.length > 0
-      ? (
-          snapshot.menuItems.reduce((acc, item) => acc + Number(item.price_cad), 0) /
-          snapshot.menuItems.length
-        ).toFixed(2)
-      : "0.00";
+      ? snapshot.menuItems.reduce((acc, item) => acc + Number(item.price_cad), 0) / snapshot.menuItems.length
+      : 0;
 
-  const squareSection = await SquareAnalyticsSection({
-    userId: user.id,
-    range,
-  });
+  const invoiceEnabled = await hasClientInvoices(user.id);
+  const [squareEnabled, invoiceBundle, spmMeta] = await Promise.all([
+    hasSquareReports(user.id),
+    invoiceEnabled ? loadClientInvoiceChartBundle(user.id, range) : Promise.resolve(null),
+    loadSpmCompetitorRows({
+      selfRestaurantName: snapshot.onboarding.restaurant_name ?? "Vous",
+      selfAvgPriceCad: averagePrice,
+    }),
+  ]);
 
-  const clientInvoiceSection = await ClientInvoiceAnalyticsSection({
-    userId: user.id,
-    range,
-  });
+  const squareSection = squareEnabled ? await SquareAnalyticsSection({ userId: user.id, range }) : null;
+  const clientInvoiceSection = invoiceEnabled ? await ClientInvoiceAnalyticsSection({ userId: user.id, range }) : null;
 
-  const menuChartPoints = buildMenuCategoryChartPoints(snapshot.menuItems);
+  const hasMenu = snapshot.menuItems.length > 0;
+  const restaurantName = snapshot.onboarding.restaurant_name ?? "—";
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-      <header className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">Statistiques</p>
-        <div className="flex items-start gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
-            <BarChart3Icon className="size-5" />
-          </span>
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Bonjour {snapshot.onboarding.owner_name}
-            </h1>
-            <p className="max-w-3xl text-muted-foreground">
-              Ventes Square, facturation clients (B2B), menu et ROI lorsque les données correspondantes sont
-              disponibles. Utilise les onglets 7 / 30 / 90 jours pour les séries temporelles.
-            </p>
-          </div>
-        </div>
-      </header>
+    <StatsPageShell>
+      <StatsPageHeader
+        ownerName={snapshot.onboarding.owner_name ?? "vous"}
+        subtitle="Vos ventes Square, la facturation B2B, le menu et le ROI RestoPrix, agrégés en une seule lecture. Choisissez la fenêtre temporelle ci-dessus."
+        kicker={`Tableau de bord · ${rangeLabels[range]}`}
+        rightSlot={
+          <>
+            <StatsSourceBlock>
+              {squareEnabled ? <StatsChip tone="emerald">Square · synchronisé</StatsChip> : null}
+              {invoiceEnabled && invoiceBundle ? (
+                <StatsChip tone="amber">
+                  B2B · {invoiceBundle.invoiceCount} facture{invoiceBundle.invoiceCount > 1 ? "s" : ""} (période)
+                </StatsChip>
+              ) : (
+                <StatsChip tone="amber">B2B · en attente d&apos;import</StatsChip>
+              )}
+              <StatsChip tone="amber">
+                SPM · {Math.min(spmMeta.filledCount, spmMeta.totalSlots)} / {spmMeta.totalSlots} segments
+              </StatsChip>
+            </StatsSourceBlock>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <StatsPeriodSwitch selectedRange={range} />
+              <Button asChild variant="outline" size="sm" className="h-8 rounded-lg border-border/80 text-[12.5px]">
+                <Link href="/dashboard/integrations/square">Exporter</Link>
+              </Button>
+            </div>
+          </>
+        }
+      />
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Restaurant</p>
-          <p className="pt-1 font-medium">{snapshot.onboarding.restaurant_name}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Profil</p>
-          <p className="pt-1 font-medium">{profileLabel}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Items menu</p>
-          <p className="pt-1 font-medium">{snapshot.menuItems.length}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Prix moyen</p>
-          <p className="pt-1 font-medium">{averagePrice} $</p>
-        </article>
-      </section>
+      <MetaStrip>
+        <MetaCell label="Restaurant" value={restaurantName} hint="Québec, QC" />
+        <MetaCell label="Profil actif" value={profileLabel} hint="stratégie tarifaire" />
+        <MetaCell label="Items menu" value={snapshot.menuItems.length.toLocaleString("fr-CA")} hint="carte active" />
+        <MetaCell label="Prix moyen" value={`${averagePrice.toFixed(2)} $`} hint="moyenne catalogue" />
+      </MetaStrip>
 
       {squareSection}
 
-      {clientInvoiceSection}
+      {hasMenu ? (
+        <>
+          <PricingF3dSection userId={user.id} menuItems={snapshot.menuItems} range={range} />
+          <PricingF4Section
+            userId={user.id}
+            menuItems={snapshot.menuItems}
+            range={range}
+            profile={snapshot.onboarding.dominant_profile ?? "securitaire"}
+          />
+        </>
+      ) : null}
 
-      {menuChartPoints.length > 0 ? <MenuChartsClient data={menuChartPoints} /> : null}
+      {(clientInvoiceSection || hasMenu) && (
+        <div className="grid gap-6 md:grid-cols-2 md:items-start">
+          {clientInvoiceSection}
+          {hasMenu ? <PricingF2Section userId={user.id} menuItems={snapshot.menuItems} range={range} compact /> : null}
+        </div>
+      )}
 
-      <section className="rounded-lg border bg-card p-6 text-card-foreground">
-        <h2 className="text-lg font-medium">Prochaines etapes produit</h2>
-        <ol className="mt-4 flex list-decimal flex-col gap-2 pl-5 text-sm text-muted-foreground">
-          {mvpSteps.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-      </section>
+      {hasMenu ? <PricingF3Section userId={user.id} menuItems={snapshot.menuItems} range={range} /> : null}
 
-      <div className="flex flex-wrap gap-3">
-        <Button asChild variant="outline">
-          <Link href="/dashboard/integrations/square">Import CSV Square</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/dashboard/integrations/client-invoices">Factures clients</Link>
-        </Button>
-      </div>
-    </div>
+      <StatsFooter restaurantName={restaurantName} />
+    </StatsPageShell>
   );
 }

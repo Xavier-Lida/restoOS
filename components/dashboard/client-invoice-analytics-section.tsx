@@ -42,5 +42,5 @@ export async function ClientInvoiceAnalyticsSection({
   }
 
   const bundle = await loadClientInvoiceChartBundle(userId, range);
-  return <ClientInvoiceChartsClient bundle={bundle} selectedRange={range} />;
+  return <ClientInvoiceChartsClient bundle={bundle} selectedRange={range} compact />;
 }
