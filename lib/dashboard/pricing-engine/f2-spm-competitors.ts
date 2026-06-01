@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { loadLatestMarketMenuItems } from "@/lib/market/load-latest-market-items";
 
 export type SpmCompetitorRow = {
   name: string;
@@ -14,41 +14,20 @@ export async function loadSpmCompetitorRows(args: {
   selfAvgPriceCad: number;
 }): Promise<{ rows: SpmCompetitorRow[]; filledCount: number; totalSlots: number }> {
   const { selfRestaurantName, selfAvgPriceCad } = args;
-  const supabase = await createClient();
+  const marketItems = await loadLatestMarketMenuItems();
 
-  let runItems: Array<{ category: string; price_cad: number | null }> = [];
-  try {
-    const { data: runRow } = await supabase
-      .from("scrape_runs")
-      .select("id")
-      .eq("status", "success")
-      .order("completed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (runRow?.id) {
-      const { data: items } = await supabase
-        .from("scrape_run_items")
-        .select("category, price_cad")
-        .eq("run_id", runRow.id);
-      runItems = (items ?? []).map((r) => ({
-        category: String(r.category ?? "Autre").trim() || "Autre",
-        price_cad: r.price_cad != null ? Number(r.price_cad) : null,
-      }));
+  const byRestaurant = new Map<string, number[]>();
+  for (const item of marketItems) {
+    if (!Number.isFinite(item.price_cad)) {
+      continue;
     }
-  } catch {
-    runItems = [];
-  }
-
-  const byCategory = new Map<string, number[]>();
-  for (const item of runItems) {
-    if (item.price_cad == null || !Number.isFinite(item.price_cad)) continue;
-    const bucket = byCategory.get(item.category) ?? [];
+    const key = item.market_restaurant_name;
+    const bucket = byRestaurant.get(key) ?? [];
     bucket.push(item.price_cad);
-    byCategory.set(item.category, bucket);
+    byRestaurant.set(key, bucket);
   }
 
-  const rows: SpmCompetitorRow[] = [...byCategory.entries()]
+  const rows: SpmCompetitorRow[] = [...byRestaurant.entries()]
     .map(([name, prices]) => ({
       name,
       avgPriceCad: prices.reduce((a, b) => a + b, 0) / prices.length,

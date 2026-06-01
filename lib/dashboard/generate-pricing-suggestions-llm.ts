@@ -101,7 +101,7 @@ Consignes :
 - Propose uniquement des changements de prix que tu juges utiles (pas besoin de couvrir tous les plats).
 - Maximum ${MAX_SUGGESTIONS} suggestions.
 - suggested_price_cad : nombre en dollars CAD, cohérent avec le type de plat et la catégorie.
-- estimated_monthly_gain_cad : estimation grossière du gain mensuel en $ CAD si le restaurateur applique ce prix (hypothèses modestes, ou null si trop incertain).
+- estimated_monthly_gain_cad : toujours null (le gain mensuel est calculé côté serveur à partir des ventes par article).
 - confidence : entre 0 et 1.
 - rationale : 1 à 3 phrases en français, sans chiffres concurrents inventés.
 
@@ -144,6 +144,7 @@ export function validateSuggestionsAgainstMenu(
     droppedUnknownItem: 0,
     droppedDuplicate: 0,
     droppedSamePrice: 0,
+    droppedPriceDecrease: 0,
   };
 
   for (const row of raw.suggestions) {
@@ -160,6 +161,12 @@ export function validateSuggestionsAgainstMenu(
     const suggested = roundMoney(row.suggested_price_cad);
     if (Math.abs(suggested - current) < 0.01) {
       stats.droppedSamePrice += 1;
+      continue;
+    }
+    // The system assumes zero price elasticity: a price decrease always means lost revenue.
+    // Only surface increases so every suggestion shown has a positive expected gain.
+    if (suggested < current) {
+      stats.droppedPriceDecrease += 1;
       continue;
     }
     seen.add(item.id);
@@ -183,7 +190,7 @@ function profileCopy(profile: ProfileValue | null): { title: string | null; guid
   const opt = profileOptions.find((o) => o.value === profile);
   return {
     title: opt?.title ?? null,
-    guidance: opt?.guidance ?? null,
+    guidance: opt?.bullets?.join(" · ") ?? null,
   };
 }
 
@@ -199,6 +206,7 @@ export type PricingSuggestionFilterStats = {
   droppedUnknownItem: number;
   droppedDuplicate: number;
   droppedSamePrice: number;
+  droppedPriceDecrease: number;
 };
 
 export type GeneratePricingSuggestionsResult = {
@@ -248,6 +256,7 @@ export async function generatePricingSuggestionsWithLlm(
     droppedUnknownItem: 0,
     droppedDuplicate: 0,
     droppedSamePrice: 0,
+    droppedPriceDecrease: 0,
   };
 
   if (input.menuItems.length === 0) {

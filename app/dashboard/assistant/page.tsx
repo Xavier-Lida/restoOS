@@ -1,17 +1,13 @@
-import { AssistantChat } from "@/components/dashboard/assistant-chat";
+import { AssistantWorkspace } from "@/components/dashboard/assistant-workspace";
 
 export default function DashboardAssistantPage() {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 pb-10">
       <header className="flex flex-col gap-2">
         <p className="text-sm text-muted-foreground">Assistant IA</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Conseiller RestoPrix</h1>
-        <p className="text-sm text-muted-foreground">
-          Contexte injecté automatiquement : objectif produit, fiche établissement, menu enregistré, synthèse des
-          imports Square lorsque disponible.
-        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">Conseiller RestOS</h1>
       </header>
-      <AssistantChat />
+      <AssistantWorkspace />
     </div>
   );
 }

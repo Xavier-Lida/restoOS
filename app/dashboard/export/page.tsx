@@ -12,12 +12,10 @@ export default async function DashboardExportPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <p className="text-sm text-muted-foreground">Export</p>
         <h1 className="text-3xl font-semibold tracking-tight">Export CSV du menu</h1>
         <p className="text-sm text-muted-foreground">
           Téléchargez un fichier CSV à partir des {count} plat(s) enregistré(s) pour{" "}
-          <span className="font-medium text-foreground">{restaurant}</span> (colonnes : catégorie, nom,
-          prix CAD, notes).
+          <span className="font-medium text-foreground">{restaurant}</span>. Vous n'aurez qu'à importer le fichier dans votre logiciel de caisse, afin de mettre à jour votre menu.
         </p>
       </header>
 

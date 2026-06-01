@@ -27,18 +27,23 @@ const SALE_ITEM_COLUMN_SYNONYMS: Record<SaleItemColumnKey, readonly string[]> = 
   category: ["categorie", "category"],
   item: ["article", "item name", "item"],
   quantity: ["qte", "quantite", "quantity"],
-  grossSales: ["ventes brutes", "gross sales"],
-  discounts: ["reductions", "discounts"],
-  netSales: ["ventes nettes", "net sales"],
-  taxes: ["taxes", "tax"],
-  transactionId: ["no de transaction", "id de la transaction", "transaction id"],
-  paymentId: ["no de paiement", "id de paiement", "payment id"],
+  // "montant brut" (Square CA) = net + taxes; use as gross fallback when no better column exists
+  grossSales: ["ventes brutes", "gross sales", "montant brut", "prix net"],
+  discounts: ["reductions", "discounts", "montant de remise"],
+  // "prix net" (Square CA) = after discounts, before taxes
+  netSales: ["ventes nettes", "net sales", "prix net"],
+  // "tps" = first Canadian tax (GST); TVQ is handled separately as taxes2
+  taxes: ["taxes", "tax", "tps"],
+  transactionId: ["no de transaction", "id de la transaction", "transaction id", "id transaction"],
+  paymentId: ["no de paiement", "id de paiement", "payment id", "id paiement"],
   device: ["nom de l'appareil", "device name"],
-  operator: ["point de vente", "employe", "employee"],
+  operator: ["point de vente", "employe", "employee", "caisse"],
   paymentMethod: ["marque de carte", "card brand"],
 };
 
 type SaleItemColumnIndex = Record<SaleItemColumnKey, number | null>;
+// taxes2 captures a second tax column (e.g. TVQ in Square Canada) summed with taxes
+type ColumnIndex = SaleItemColumnIndex & { taxes2: number | null };
 
 function resolveSaleItemsDelimiter(headerLine: string): CsvDelimiter {
   const tabCount = splitDelimitedLine(headerLine, "\t").length;
@@ -69,7 +74,7 @@ function findColumnIndex(
   return null;
 }
 
-function buildSaleItemColumnIndex(headers: string[]): SaleItemColumnIndex {
+function buildSaleItemColumnIndex(headers: string[]): ColumnIndex {
   const normalizedHeaders = headers.map(normalizeHeader);
   const keys = Object.keys(SALE_ITEM_COLUMN_SYNONYMS) as SaleItemColumnKey[];
   const entries = keys.map((key) => {
@@ -77,7 +82,12 @@ function buildSaleItemColumnIndex(headers: string[]): SaleItemColumnIndex {
     const role = key === "taxes" ? "tax" : "other";
     return [key, findColumnIndex(normalizedHeaders, patterns, role)] as const;
   });
-  return Object.fromEntries(entries) as SaleItemColumnIndex;
+  const idx = Object.fromEntries(entries) as SaleItemColumnIndex;
+
+  // If "taxes" resolved to TPS, look for TVQ as a second tax column to sum
+  const taxes2 = findColumnIndex(normalizedHeaders, ["tvq"], "tax");
+
+  return { ...idx, taxes2 };
 }
 
 function cellAt(cols: readonly string[], idx: number | null): string {
@@ -108,11 +118,19 @@ function isIsoDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/u.test(value.trim());
 }
 
-function rowToSaleItem(cols: string[], idx: SaleItemColumnIndex): SaleItem | null {
+function rowToSaleItem(cols: string[], idx: ColumnIndex): SaleItem | null {
   const date = cellAt(cols, idx.date);
   if (!isIsoDate(date)) {
     return null;
   }
+
+  const taxes = parseAmount(cellAt(cols, idx.taxes)) + parseAmount(cellAt(cols, idx.taxes2));
+  const netSales = parseAmount(cellAt(cols, idx.netSales));
+
+  // When "montant brut" is used for grossSales it includes taxes; prefer netSales when
+  // the resolved grossSales column is the same index as netSales (both = "prix net").
+  const rawGross = parseAmount(cellAt(cols, idx.grossSales));
+  const grossSales = idx.grossSales === idx.netSales ? netSales : rawGross;
 
   return {
     date: date.trim(),
@@ -121,10 +139,10 @@ function rowToSaleItem(cols: string[], idx: SaleItemColumnIndex): SaleItem | nul
     category: cellAt(cols, idx.category),
     item: cellAt(cols, idx.item),
     quantity: parseQuantity(cellAt(cols, idx.quantity)),
-    grossSales: parseAmount(cellAt(cols, idx.grossSales)),
+    grossSales,
     discounts: parseAmount(cellAt(cols, idx.discounts)),
-    netSales: parseAmount(cellAt(cols, idx.netSales)),
-    taxes: parseAmount(cellAt(cols, idx.taxes)),
+    netSales,
+    taxes,
     transactionId: cellAt(cols, idx.transactionId),
     paymentId: cellAt(cols, idx.paymentId),
     device: cellAt(cols, idx.device),

@@ -57,9 +57,11 @@ const HEADER_ROLE_PATTERNS: Record<HeaderRole, readonly string[]> = {
     "date de commande",
   ],
   gross: ["prix brut", "gross sales", "ventes brutes", "montant brut", "extended price"],
-  discounts: ["reductions", "discounts", "discount", "rabais"],
-  net: ["ventes nettes", "net sales", "net", "credit card net sales", "sales net"],
-  tax: ["taxes", "tax", "taxe", "montant de la taxe"],
+  discounts: ["reductions", "discounts", "discount", "rabais", "montant de remise"],
+  // "prix net" = Square CA column for after-discount pre-tax amount
+  net: ["ventes nettes", "net sales", "net", "credit card net sales", "sales net", "prix net"],
+  // "tps" = GST in Square CA; TVQ is handled as a second tax column in parseItemizedFormat
+  tax: ["taxes", "tax", "taxe", "montant de la taxe", "tps"],
   total: ["ventes totales", "total sales", "total", "montant total", "grand total"],
   paymentId: ["id de paiement", "no de paiement", "payment id", "payment ids"],
   transactionId: ["no de transaction", "id de la transaction", "transaction id", "transaction ids"],
@@ -292,11 +294,14 @@ function parseItemizedFormat(content: string, fileName: string): ParsedSquareSum
   }
   const { headerLineIndex, delimiter, headers } = headerMatch;
 
+  const normalizedHeaders = headers.map(normalizeHeader);
   const dateIdx = headerColumnIndex(headers, "date");
   const grossIdx = headerColumnIndex(headers, "gross");
   const discountIdx = headerColumnIndex(headers, "discounts");
   const netIdx = headerColumnIndex(headers, "net");
   const taxIdx = headerColumnIndex(headers, "tax");
+  // TVQ = Quebec provincial tax (Square CA); summed with TPS which is resolved via taxIdx
+  const tvqIdx = (() => { const i = normalizedHeaders.indexOf("tvq"); return i === -1 ? null : i; })();
   const totalIdx = headerColumnIndex(headers, "total");
   const paymentIdx = headerColumnIndex(headers, "paymentId");
   const transactionIdx = headerColumnIndex(headers, "transactionId");
@@ -328,12 +333,13 @@ function parseItemizedFormat(content: string, fileName: string): ParsedSquareSum
     const netRaw = netIdx !== null ? cols[netIdx] : "";
     const totalRaw = totalIdx !== null ? cols[totalIdx] : "";
     const taxRaw = taxIdx !== null ? cols[taxIdx] : "";
+    const tvqRaw = tvqIdx !== null ? cols[tvqIdx] : "";
     const discountRaw = discountIdx !== null ? cols[discountIdx] : "";
 
     bucket.grossSalesCad += parseCadAmount(grossRaw);
     bucket.netSalesCad += parseCadAmount(netRaw);
     bucket.totalSalesCad += parseCadAmount(totalRaw);
-    bucket.taxesCad += parseCadAmount(taxRaw);
+    bucket.taxesCad += parseCadAmount(taxRaw) + parseCadAmount(tvqRaw);
     bucket.discountsCad += parseCadAmount(discountRaw);
     bucket.rowCount += 1;
 

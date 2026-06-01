@@ -66,7 +66,7 @@ export default async function Home() {
             </h1>
 
             <p className="max-w-lg text-lg leading-relaxed text-muted-foreground">
-              RestoPrix connecte votre POS, lit les prix de vos concurrents
+              RestoOS connecte votre POS, lit les prix de vos concurrents
               locaux et vous propose le bon prix, plat par plat. Vous validez,
               vous exportez, la marge suit.
             </p>

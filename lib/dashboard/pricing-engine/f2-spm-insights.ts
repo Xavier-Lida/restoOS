@@ -2,10 +2,12 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import type { MenuItemRecord } from "@/lib/onboarding/types";
+import { loadLatestMarketMenuItems } from "@/lib/market/load-latest-market-items";
 import { loadPricingF0F1Insights } from "@/lib/dashboard/pricing-engine/f0f1-insights";
 import type { RevenueRange } from "@/lib/square/dashboard";
 
 import type { PricingF0F1DishPoint } from "@/lib/dashboard/pricing-engine/f0f1-insights";
+import { posItemMatchesMenuName } from "@/lib/square/item-name";
 
 export type SpmVerdict = "trop_bas" | "zone_optimal" | "hors_marche";
 
@@ -30,25 +32,12 @@ export type PricingF2Insights = {
   dishes: PricingF2DishPoint[];
 };
 
-function normalizeItemName(value: string): string {
-  return value.trim().toLocaleLowerCase("fr-CA");
-}
-
 function kappaFromCompetitorCategory(category: string): number {
   const c = category.trim().toLowerCase();
   if (/gastro|gastronom/i.test(c)) return 1.4;
   if (/bistro|bistronom/i.test(c)) return 1.15;
   if (/rapide|fast/i.test(c)) return 0.75;
   return 1.0;
-}
-
-function competitorMatchesDish(args: { competitorName: string; competitorCategory: string; dishName: string }) {
-  const { competitorName, dishName } = args;
-  const a = normalizeItemName(competitorName);
-  const b = normalizeItemName(dishName);
-  if (a.length === 0 || b.length === 0) return false;
-  // Match permissif : substring bidirectionnel.
-  return a.includes(b) || b.includes(a);
 }
 
 export async function loadPricingF2Insights(args: { userId: string; menuItems: MenuItemRecord[]; range: RevenueRange }) {
@@ -78,26 +67,16 @@ export async function loadPricingF2Insights(args: { userId: string; menuItems: M
     latestRun = null;
   }
 
-  if (latestRun?.id) {
-    try {
-      const { data: items, error } = await supabase
-        .from("scrape_run_items")
-        .select("item_name, category, price_cad")
-        .eq("run_id", latestRun.id);
-      if (error) throw error;
-      runItems = (items ?? []).map((r) => ({
-        item_name: String(r.item_name ?? ""),
-        category: String(r.category ?? ""),
-        price_cad: r.price_cad != null ? Number(r.price_cad) : null,
-      }));
-    } catch {
-      runItems = [];
-    }
-  }
+  const marketItems = await loadLatestMarketMenuItems();
+  runItems = marketItems.map((r) => ({
+    item_name: r.item_name,
+    category: r.category,
+    price_cad: r.price_cad,
+  }));
 
   const dishes: PricingF2DishPoint[] = base.dishes.map((dish) => {
     const matches = runItems
-      .filter((r) => r.price_cad != null && competitorMatchesDish({ competitorName: r.item_name, competitorCategory: r.category, dishName: dish.item_name }))
+      .filter((r) => r.price_cad != null && posItemMatchesMenuName(r.item_name, dish.item_name))
       .map((r) => ({
         price: r.price_cad as number,
         kappa: kappaFromCompetitorCategory(r.category),
@@ -110,7 +89,7 @@ export async function loadPricingF2Insights(args: { userId: string; menuItems: M
         spm_pct: null,
         competitorCount: 0,
         spm_verdict: null,
-        spm_reco: "Aucun concurrent correspondant trouvé (SPM indisponible).",
+        spm_reco: "Pas assez de données...",
         confidence: "incomplet",
       };
     }

@@ -123,10 +123,7 @@ export async function POST(request: Request) {
 
     const onboarding = await getOrCreateOnboarding(user.id);
 
-    const { error: delError } = await supabase
-      .from("restaurant_menu_items")
-      .delete()
-      .eq("onboarding_id", onboarding.id);
+    const { error: delError } = await supabase.from("menu_items").delete().eq("restaurant_id", onboarding.id);
 
     if (delError) {
       return NextResponse.json({ error: delError.message }, { status: 500 });
@@ -142,7 +139,7 @@ export async function POST(request: Request) {
       const notes = notesParts.filter(Boolean).join(" ").trim() || null;
 
       return {
-        onboarding_id: onboarding.id,
+        restaurant_id: onboarding.id,
         item_name: item.name.slice(0, 500),
         category: item.category.slice(0, 200),
         price_cad: priceCad,
@@ -151,10 +148,36 @@ export async function POST(request: Request) {
       };
     });
 
-    const { error: insError } = await supabase.from("restaurant_menu_items").insert(rows);
+    const { error: insError } = await supabase.from("menu_items").insert(rows);
 
     if (insError) {
       return NextResponse.json({ error: insError.message }, { status: 500 });
+    }
+
+    const { data: insertedItems } = await supabase
+      .from("menu_items")
+      .select("*")
+      .eq("restaurant_id", onboarding.id)
+      .order("position", { ascending: true });
+
+    if (insertedItems && insertedItems.length > 0) {
+      const { createMenuVersion } = await import("@/lib/restaurant/menu-versions");
+      await createMenuVersion({
+        supabase,
+        restaurantId: onboarding.id,
+        source: "pdf_import",
+        createdBy: user.id,
+        menuItems: insertedItems.map((r) => ({
+          id: r.id as string,
+          restaurant_id: onboarding.id,
+          onboarding_id: onboarding.id,
+          item_name: r.item_name as string,
+          category: r.category as string,
+          price_cad: Number(r.price_cad),
+          notes: (r.notes as string | null) ?? null,
+          position: Number(r.position),
+        })),
+      });
     }
 
     revalidatePath("/onboarding");

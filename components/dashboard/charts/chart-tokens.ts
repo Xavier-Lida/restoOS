@@ -1,5 +1,5 @@
 export const chartTokens = {
-  background: "#0f1910",
+  background: "#0c1410",
   card: "#131f18",
   popover: "#0e1810",
   muted: "#162018",

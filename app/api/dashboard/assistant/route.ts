@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { runAssistantReply } from "@/lib/dashboard/assistant-run";
 import { buildAssistantSystemPrompt } from "@/lib/dashboard/assistant-context";
 import {
-  formatIntegrationAssistantSnippet,
-  resolveIntegrationAssistantContext,
-} from "@/lib/dashboard/integration-assistant-snippet";
+  formatChartCatalogForPrompt,
+  loadAssistantDataBundle,
+} from "@/lib/dashboard/assistant-data-bundle";
+import { runAssistantReply } from "@/lib/dashboard/assistant-run";
 import { getOnboardingSnapshot } from "@/lib/onboarding/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -55,19 +55,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Onboarding incomplet." }, { status: 403 });
   }
 
-  let integrationsSnippet: string;
-  try {
-    const ctx = await resolveIntegrationAssistantContext(user.id);
-    integrationsSnippet = formatIntegrationAssistantSnippet(ctx);
-  } catch {
-    integrationsSnippet =
-      "Intégrations POS : impossible de résumer les données pour le moment (erreur serveur).";
-  }
+  const bundle = await loadAssistantDataBundle(user.id);
 
   const system = buildAssistantSystemPrompt({
-    snapshot,
-    integrationsSnippet,
-    marketSnippet: null,
+    snapshot: bundle.snapshot,
+    integrationsSnippet: bundle.integrationsSnippet,
+    marketSnippet: bundle.marketSnippet,
+    chartCatalogPrompt: formatChartCatalogForPrompt(bundle.chartCatalog),
+    hasSalesData: bundle.hasSalesData,
+    hasMarketData: bundle.hasMarketData,
   });
 
   try {

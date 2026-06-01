@@ -1,27 +1,31 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Upload } from "lucide-react";
 
-import { uploadSalesCsvAction } from "@/app/dashboard/integrations/sales-csv/actions";
 import { FlashToaster, type FlashPayload } from "@/components/flash-toaster";
+import { SalesCsvDropzone } from "@/components/dashboard/integrations/sales-csv-dropzone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { getAuthedUser } from "@/lib/onboarding/server";
 
 const errorHints: Record<string, string> = {
   missing_table:
-    "La table square_sales_reports n'existe pas encore sur ton projet Supabase. Dans le dashboard Supabase : SQL Editor → colle tout le fichier docs/sql/square_supabase.sql (ou exécute la migration supabase/migrations/20260507183000_square_sales_reports.sql avec le CLI) → Run. Recharge cette page puis réessaie l'upload.",
+    "Schéma incomplet : applique les migrations dans supabase/migrations/ (20260601120200_pos_sales.sql) via Supabase CLI ou SQL Editor.",
+  missing_items_table:
+    "Tables POS absentes : applique supabase/migrations/20260601120200_pos_sales.sql puis réessaie.",
+  duplicate_file: "Ce fichier CSV a déjà été importé (même empreinte). Utilise un export plus récent si besoin.",
 };
 
-function buildImportFlash(newCount: number, updatedCount: number): string {
+function buildImportFlash(newCount: number, updatedCount: number, itemsCount: number): string {
   const parts: string[] = [];
   if (newCount > 0) {
     parts.push(`${newCount} nouveau${newCount > 1 ? "x" : ""} jour${newCount > 1 ? "s" : ""} importé${newCount > 1 ? "s" : ""}`);
   }
   if (updatedCount > 0) {
     parts.push(`${updatedCount} jour${updatedCount > 1 ? "s" : ""} mis à jour (données déjà existantes)`);
+  }
+  if (itemsCount > 0) {
+    parts.push(
+      `${itemsCount} ligne${itemsCount > 1 ? "s" : ""} article${itemsCount > 1 ? "s" : ""} (quantités par plat) enregistrée${itemsCount > 1 ? "s" : ""}`,
+    );
   }
   if (parts.length === 0) {
     return "CSV importé. Les graphiques sont visibles dans Statistiques.";
@@ -54,7 +58,8 @@ export default async function SalesCsvPage({
   if (status === "imported") {
     const newCount = typeof params.new === "string" ? Number(params.new) : 0;
     const updatedCount = typeof params.updated === "string" ? Number(params.updated) : 0;
-    flashes.push({ variant: "success", message: buildImportFlash(newCount, updatedCount) });
+    const itemsCount = typeof params.items === "string" ? Number(params.items) : 0;
+    flashes.push({ variant: "success", message: buildImportFlash(newCount, updatedCount, itemsCount) });
     if (updatedCount > 0) {
       flashes.push({
         variant: "warning",
@@ -66,7 +71,14 @@ export default async function SalesCsvPage({
     flashes.push({
       variant: "error",
       message:
-        "Schéma Supabase incomplet : la table square_sales_reports est absente. Voir les instructions ci-dessous.",
+        "Schéma Supabase incomplet : la table pos_daily_sales_reports est absente. Voir les instructions ci-dessous.",
+    });
+  }
+  if (errorCode === "missing_items_table") {
+    flashes.push({
+      variant: "error",
+      message:
+        "Schéma Supabase incomplet : pos_sale_lines ou pos_sales_items_daily est absent. Voir les instructions ci-dessous.",
     });
   }
 
@@ -75,17 +87,12 @@ export default async function SalesCsvPage({
       <FlashToaster flashes={flashes} />
 
       <header className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">Intégrations</p>
         <div className="flex items-start gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
-            <Upload className="size-5" />
-          </span>
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-tight">Import des ventes CSV</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Import CSV des ventes</h1>
             <p className="max-w-2xl text-muted-foreground">
-              Importe un export CSV de ton logiciel de caisse (Square, Lightspeed, Toast, etc.) : récapitulatif des
-              ventes (deux colonnes) ou export détaillé par article (colonnes Date, Ventes nettes, etc., en français
-              ou en anglais). Les ventes sont agrégées par jour pour les graphiques.
+              Importe un export CSV de ton logiciel de caisse (récap journalier ou lignes par article).
+              Le fichier est analysé automatiquement pour alimenter les statistiques et le gain mensuel des suggestions de prix.
             </p>
           </div>
         </div>
@@ -102,34 +109,14 @@ export default async function SalesCsvPage({
         <CardHeader>
           <CardTitle>Importer un CSV</CardTitle>
           <CardDescription>
-            Accepte tout export de caisse avec une colonne de date et des montants de ventes. Jusqu&apos;à environ 25 Mo.
+            Accepte les exports journaliers ou détaillés par article (Date, Article, Quantité) pour alimenter
+            les graphiques et le gain mensuel des suggestions de prix. Jusqu&apos;à environ 25 Mo.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={uploadSalesCsvAction} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="sales-csv-file">Fichier CSV</Label>
-              <input
-                id="sales-csv-file"
-                type="file"
-                name="report"
-                accept=".csv,text/csv"
-                required
-                className="max-w-lg rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border file:bg-muted file:px-3 file:py-1.5"
-              />
-            </div>
-            <div>
-              <Button type="submit">Importer le CSV</Button>
-            </div>
-          </form>
+          <SalesCsvDropzone />
         </CardContent>
       </Card>
-
-      <div className="flex flex-wrap gap-3">
-        <Button asChild variant="outline">
-          <Link href="/dashboard/stats">Voir les statistiques</Link>
-        </Button>
-      </div>
     </main>
   );
 }

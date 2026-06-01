@@ -17,12 +17,15 @@ export async function loadAcceptedSuggestionsGain(
   }
 
   const rows = (data ?? []) as Array<{ estimated_monthly_gain_cad: number | null }>;
-  const totalMonthlyGainCad = rows.reduce(
-    (sum, row) => sum + Number(row.estimated_monthly_gain_cad ?? 0),
+  // Only count price-increase acceptances for ROI — price reductions are a business
+  // choice and don't reflect software-generated revenue.
+  const gainRows = rows.filter((r) => Number(r.estimated_monthly_gain_cad ?? 0) > 0);
+  const totalMonthlyGainCad = gainRows.reduce(
+    (sum, row) => sum + Number(row.estimated_monthly_gain_cad),
     0,
   );
   return {
     totalMonthlyGainCad,
-    acceptedCount: rows.length,
+    acceptedCount: gainRows.length,
   };
 }

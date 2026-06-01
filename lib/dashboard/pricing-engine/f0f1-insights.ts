@@ -71,7 +71,10 @@ export async function loadPricingF0F1Insights(args: {
     transactionsInRange = points.reduce((acc, p) => acc + p.transactions, 0);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erreur inconnue";
-    if (msg.toLowerCase().includes("square_sales_reports")) {
+    if (
+      msg.toLowerCase().includes("pos_daily_sales_reports") ||
+      msg.toLowerCase().includes("square_sales_reports")
+    ) {
       modeSquare = "missing_square";
       transactionsInRange = 0;
     } else {

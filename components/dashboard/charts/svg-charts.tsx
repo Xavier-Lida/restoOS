@@ -1,8 +1,34 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { chartTokens as T } from "@/components/dashboard/charts/chart-tokens";
+
+const dayFormatter = new Intl.DateTimeFormat("fr-CA", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+
+const weekdayFormatter = new Intl.DateTimeFormat("fr-CA", { weekday: "short" });
+
+export type ComboBarsXLabels = "weekday" | "none";
+
+function formatWeekdayLabel(day: string): string {
+  return weekdayFormatter.format(new Date(`${day}T12:00:00`));
+}
+
+const cadFormatter = new Intl.NumberFormat("fr-CA", {
+  style: "currency",
+  currency: "CAD",
+  maximumFractionDigits: 0,
+});
+
+export type SalesBarPoint = {
+  day: string;
+  netSales: number;
+  transactions: number;
+};
 
 type Point = { x: number; y: number };
 
@@ -71,107 +97,128 @@ export function Sparkline({
 }
 
 export function ComboBarsLineChart({
-  bars,
-  line,
+  points,
   width = 940,
   height = 230,
   barColor = T.primary,
-  lineColor = T.blue,
-  labels,
+  xLabels = "none",
 }: {
-  bars: number[];
-  line: number[];
+  points: SalesBarPoint[];
   width?: number;
   height?: number;
   barColor?: string;
-  lineColor?: string;
-  labels: string[];
+  xLabels?: ComboBarsXLabels;
 }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const bars = points.map((p) => p.netSales);
+  const showXLabels = xLabels === "weekday";
+  const labels = showXLabels ? points.map((p) => formatWeekdayLabel(p.day)) : [];
   const padL = 38;
   const padR = 12;
   const padT = 14;
-  const padB = 26;
+  const padB = showXLabels ? 26 : 18;
   const count = Math.max(bars.length, 2);
   const chartW = width - padL - padR;
   const chartH = height - padT - padB;
   const maxBar = maxOf(bars) * 1.08;
-  const maxLine = maxOf(line) * 1.08;
   const step = chartW / count;
   const barW = Math.max(4, step - 3);
   const yBar = buildLinearScale(0, maxBar, padT + chartH, padT);
-  const yLine = buildLinearScale(0, maxLine, padT + chartH, padT);
-  const points = line.map((value, index) => ({
-    x: padL + index * step + barW / 2,
-    y: yLine(value),
-  }));
+
+  const hovered = hoveredIndex != null ? points[hoveredIndex] : null;
+  const tooltipLeftPct =
+    hoveredIndex != null && bars.length > 0
+      ? ((padL + hoveredIndex * step + barW / 2) / width) * 100
+      : 50;
 
   return (
-    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-      <defs>
-        <linearGradient id="combo-bar-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={barColor} stopOpacity="0.95" />
-          <stop offset="100%" stopColor={barColor} stopOpacity="0.45" />
-        </linearGradient>
-      </defs>
-      {[0, 0.25, 0.5, 0.75, 1].map((t, i) => {
-        const y = padT + chartH - chartH * t;
-        return (
-          <g key={`grid-${i}`}>
-            <line
-              x1={padL}
-              x2={width - padR}
-              y1={y}
-              y2={y}
-              stroke={T.border}
-              strokeDasharray={i === 0 ? "0" : "2 4"}
-              opacity={i === 0 ? 0.6 : 0.4}
-            />
-            <text x={2} y={y + 3} fontSize="9" fill={T.mutedForeground}>
-              {Math.round(maxBar * t).toLocaleString("fr-CA")} $
-            </text>
-          </g>
-        );
-      })}
-      {bars.map((value, index) => {
-        const x = padL + index * step;
-        const y = yBar(value);
-        return (
-          <rect
-            key={`bar-${index}`}
-            x={x}
-            y={y}
-            width={barW}
-            height={Math.max(1, padT + chartH - y)}
-            rx="1.8"
-            fill="url(#combo-bar-gradient)"
-            opacity={index === bars.length - 1 ? 1 : 0.92}
-          />
-        );
-      })}
-      <polyline points={buildPolyline(points)} fill="none" stroke={lineColor} strokeWidth="1.7" opacity="0.92" />
-      {points.map((point, index) =>
-        index % Math.max(1, Math.floor(points.length / 8)) === 0 ? (
-          <circle key={`dot-${index}`} cx={point.x} cy={point.y} r="2" fill={lineColor} />
-        ) : null,
-      )}
-      {labels.map((label, index) => {
-        if (index % Math.max(1, Math.floor(labels.length / 6)) !== 0 && index !== labels.length - 1) {
-          return null;
-        }
-        return (
-          <text
-            key={`label-${index}`}
-            x={padL + index * step + barW / 2}
-            y={height - 6}
-            textAnchor="middle"
-            fontSize="9"
-            fill={T.mutedForeground}
-          >
-            {label}
-          </text>
-        );
-      })}
-    </svg>
+    <div className="relative">
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+        <defs>
+          <linearGradient id="combo-bar-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={barColor} stopOpacity="0.95" />
+            <stop offset="100%" stopColor={barColor} stopOpacity="0.45" />
+          </linearGradient>
+        </defs>
+        {[0, 0.25, 0.5, 0.75, 1].map((t, i) => {
+          const y = padT + chartH - chartH * t;
+          return (
+            <g key={`grid-${i}`}>
+              <line
+                x1={padL}
+                x2={width - padR}
+                y1={y}
+                y2={y}
+                stroke={T.border}
+                strokeDasharray={i === 0 ? "0" : "2 4"}
+                opacity={i === 0 ? 0.6 : 0.4}
+              />
+              <text x={2} y={y + 3} fontSize="9" fill={T.mutedForeground}>
+                {Math.round(maxBar * t).toLocaleString("fr-CA")} $
+              </text>
+            </g>
+          );
+        })}
+        {bars.map((value, index) => {
+          const x = padL + index * step;
+          const y = yBar(value);
+          const active = hoveredIndex === index;
+          return (
+            <g key={`bar-${index}`}>
+              <rect
+                x={x}
+                y={y}
+                width={barW}
+                height={Math.max(1, padT + chartH - y)}
+                rx="1.8"
+                fill="url(#combo-bar-gradient)"
+                opacity={active ? 1 : index === bars.length - 1 ? 1 : 0.92}
+              />
+              <rect
+                x={x - 2}
+                y={padT}
+                width={barW + 4}
+                height={chartH}
+                fill="transparent"
+                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseLeave={() => setHoveredIndex(null)}
+              />
+            </g>
+          );
+        })}
+        {showXLabels
+          ? labels.map((label, index) => (
+              <text
+                key={`label-${index}`}
+                x={padL + index * step + barW / 2}
+                y={height - 6}
+                textAnchor="middle"
+                fontSize="9"
+                fill={T.mutedForeground}
+              >
+                {label}
+              </text>
+            ))
+          : null}
+      </svg>
+      {hovered ? (
+        <div
+          className="pointer-events-none absolute top-2 z-10 min-w-[148px] -translate-x-1/2 rounded-lg border border-border/80 bg-popover px-3 py-2 text-[12px] shadow-md"
+          style={{ left: `${tooltipLeftPct}%` }}
+        >
+          <p className="font-medium text-foreground">
+            {dayFormatter.format(new Date(`${hovered.day}T12:00:00`))}
+          </p>
+          <p className="mt-1 tabular-nums text-muted-foreground">
+            Encaissé · <span className="text-foreground">{cadFormatter.format(hovered.netSales)}</span>
+          </p>
+          <p className="tabular-nums text-muted-foreground">
+            Transactions ·{" "}
+            <span className="text-foreground">{hovered.transactions.toLocaleString("fr-CA")}</span>
+          </p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -25,9 +25,9 @@ const navMain = [
 ] as const;
 
 const navIntegrations = [
-  { href: "/dashboard/integrations/sales-csv", label: "Import CSV", icon: PlugIcon, exact: false },
-  { href: "/dashboard/integrations/client-invoices", label: "Factures clients", icon: FileTextIcon, exact: false },
-  { href: "/dashboard/export", label: "Export CSV", icon: FileDownIcon },
+  { href: "/dashboard/integrations/sales-csv", label: "Import ventes", icon: PlugIcon, exact: false },
+  { href: "/dashboard/integrations/supplier-invoices", label: "Factures fournisseur", icon: FileTextIcon, exact: false },
+  { href: "/dashboard/export", label: "Export menu", icon: FileDownIcon },
 ] as const;
 
 type AppSidebarProps = {

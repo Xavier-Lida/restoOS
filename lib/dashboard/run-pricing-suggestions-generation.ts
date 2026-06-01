@@ -15,8 +15,10 @@ import {
   isLegacyPricingSuggestionsColumnMessage,
   isMissingPricingSuggestionsTableMessage,
 } from "@/lib/dashboard/pricing-suggestions";
+import { applyMonthlyGainFromSalesVolume } from "@/lib/dashboard/apply-suggestion-monthly-gain";
 import { getAuthedUser, getOnboardingSnapshot } from "@/lib/onboarding/server";
 import { hasSquareReports, loadSquareDailyRevenue, summarizeSquareRevenue } from "@/lib/square/dashboard";
+import { loadMenuItemQuantitySold30d } from "@/lib/square/menu-item-sales-volume";
 
 export type PricingGenerationErrorCode =
   | "missing_ai"
@@ -78,6 +80,7 @@ export async function runPricingSuggestionsGeneration(): Promise<PricingGenerati
 
     const rows = generated.suggestions.map((s) => ({
       user_id: user.id,
+      restaurant_id: snapshot.onboarding.id,
       menu_item_id: s.menu_item_id,
       current_price_cad: s.current_price_cad,
       suggested_price_cad: s.suggested_price_cad,
@@ -154,6 +157,9 @@ export async function runPricingSuggestionsGeneration(): Promise<PricingGenerati
     };
   }
 
+  const quantityByMenuItemId = await loadMenuItemQuantitySold30d(user.id, menuItems);
+  const suggestionsWithGain = applyMonthlyGainFromSalesVolume(generated.suggestions, quantityByMenuItemId);
+
   try {
     await deletePendingPricingSuggestionsForUser(user.id);
   } catch (e) {
@@ -164,8 +170,9 @@ export async function runPricingSuggestionsGeneration(): Promise<PricingGenerati
     throw e;
   }
 
-  const rows = generated.suggestions.map((s) => ({
+  const rows = suggestionsWithGain.map((s) => ({
     user_id: user.id,
+    restaurant_id: snapshot.onboarding.id,
     menu_item_id: s.menu_item_id,
     current_price_cad: s.current_price_cad,
     suggested_price_cad: s.suggested_price_cad,

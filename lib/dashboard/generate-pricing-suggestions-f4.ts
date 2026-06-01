@@ -1,15 +1,17 @@
 import "server-only";
 
+import { applyMonthlyGainFromSalesVolume } from "@/lib/dashboard/apply-suggestion-monthly-gain";
+import { loadPricingF4Insights } from "@/lib/dashboard/pricing-engine/f4-insights";
+import { loadMenuItemQuantitySold30d } from "@/lib/square/menu-item-sales-volume";
 import type { MenuItemRecord } from "@/lib/onboarding/types";
 import type { PricingProfile } from "@/lib/pricing-engine/math";
-import { loadPricingF4Insights } from "@/lib/dashboard/pricing-engine/f4-insights";
 
 export type F4SuggestionRow = {
   menu_item_id: string;
   current_price_cad: number;
   suggested_price_cad: number;
   rationale: string;
-  estimated_monthly_gain_cad: number;
+  estimated_monthly_gain_cad: number | null;
   confidence: number;
   model: string;
 };
@@ -25,16 +27,19 @@ export async function generatePricingSuggestionsWithF4(args: {
 }): Promise<{ suggestions: F4SuggestionRow[]; counts: { A1: number; O1: number; C2: number } }> {
   const { userId, menuItems, profile } = args;
 
-  const insights = await loadPricingF4Insights({ userId, menuItems, range: "30d", profile });
-  const suggestions = insights.decisions
+  const [insights, quantityByMenuItemId] = await Promise.all([
+    loadPricingF4Insights({ userId, menuItems, range: "30d", profile }),
+    loadMenuItemQuantitySold30d(
+      userId,
+      menuItems.map((m) => ({ id: m.id, item_name: m.item_name })),
+    ),
+  ]);
+
+  const baseSuggestions = insights.decisions
     .filter((d) => d.action === "A1" && d.decision.suggestedPriceCad != null)
     .map((d) => {
       const suggested = d.decision.suggestedPriceCad as number;
       const current = d.decision.currentPriceCad;
-      const delta = suggested - current;
-
-      // Proxy "gain" : delta price * volume mensuelle estimée (transactions).
-      const estimated_monthly_gain_cad = delta * (d.volume_mois_est ?? 0);
 
       const confidenceBase = d.spm_pct != null ? 0.62 : 0.45;
       const confidence = clamp(
@@ -55,15 +60,16 @@ export async function generatePricingSuggestionsWithF4(args: {
         current_price_cad: current,
         suggested_price_cad: suggested,
         rationale,
-        estimated_monthly_gain_cad: Math.round(estimated_monthly_gain_cad * 100) / 100,
+        estimated_monthly_gain_cad: null as number | null,
         confidence,
         model: "F4-deterministic",
       };
     });
+
+  const suggestions = applyMonthlyGainFromSalesVolume(baseSuggestions, quantityByMenuItemId);
 
   return {
     suggestions,
     counts: { A1: insights.actionCounts.A1, O1: insights.actionCounts.O1, C2: insights.actionCounts.C2 },
   };
 }
-

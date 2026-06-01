@@ -1,14 +1,10 @@
 import Link from "next/link";
 import { SparklesIcon } from "lucide-react";
 
-import {
-  acceptPricingSuggestionAction,
-  rejectPricingSuggestionAction,
-} from "@/app/dashboard/pricing-suggestions/actions";
 import { FlashToaster, type FlashPayload } from "@/components/flash-toaster";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PricingSuggestionsGeneratePanel } from "@/components/dashboard/pricing-suggestions-generate-panel";
-import { Button } from "@/components/ui/button";
+import { PricingSuggestionsTable } from "@/components/dashboard/pricing-suggestions-table.client";
 import { isAnthropicConfigured } from "@/lib/admin/anthropic-env";
 import {
   loadPendingPricingSuggestions,
@@ -16,6 +12,7 @@ import {
   type PricingSuggestionWithMenu,
 } from "@/lib/dashboard/pricing-suggestions";
 import { getAuthedUser, getOnboardingSnapshot } from "@/lib/onboarding/server";
+import { hasSquareItemSalesInLast30d } from "@/lib/square/menu-item-sales-volume";
 
 export const maxDuration = 120;
 
@@ -25,12 +22,6 @@ const cad = new Intl.NumberFormat("fr-CA", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
-
-function deltaPct(current: number, suggested: number): string {
-  if (!Number.isFinite(current) || current <= 0) return "—";
-  const pct = ((suggested - current) / current) * 100;
-  return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)} %`;
-}
 
 function buildFlashes(
   status: string | undefined,
@@ -54,59 +45,6 @@ function buildFlashes(
   return [];
 }
 
-function SuggestionTable({ rows }: { rows: PricingSuggestionWithMenu[] }) {
-  if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">Aucune suggestion en attente.</p>;
-  }
-
-  return (
-    <div className="overflow-x-auto rounded-lg border border-border/60">
-      <table className="w-full min-w-[780px] border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-border/60 bg-muted/30 text-left">
-            <th className="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Plat</th>
-            <th className="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Actuel</th>
-            <th className="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Suggéré</th>
-            <th className="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Écart</th>
-            <th className="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Gain / mois</th>
-            <th className="min-w-[200px] px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Note</th>
-            <th className="px-4 py-2.5 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id} className="border-b border-border/40 last:border-0 hover:bg-muted/10">
-              <td className="px-4 py-3 font-medium">{row.item_name}</td>
-              <td className="px-4 py-3 tabular-nums text-muted-foreground">{cad.format(row.menu_price_cad)}</td>
-              <td className="px-4 py-3 tabular-nums font-medium text-primary">{cad.format(row.suggested_price_cad)}</td>
-              <td className="px-4 py-3 tabular-nums">{deltaPct(row.menu_price_cad, row.suggested_price_cad)}</td>
-              <td className="px-4 py-3 tabular-nums">
-                {row.estimated_monthly_gain_cad != null && Number.isFinite(row.estimated_monthly_gain_cad)
-                  ? cad.format(row.estimated_monthly_gain_cad)
-                  : "—"}
-              </td>
-              <td className="max-w-[260px] px-4 py-3 text-muted-foreground" title={row.rationale ?? ""}>
-                {row.rationale ? (row.rationale.length > 100 ? `${row.rationale.slice(0, 97)}…` : row.rationale) : "—"}
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div className="flex flex-wrap justify-end gap-1.5">
-                  <form action={acceptPricingSuggestionAction}>
-                    <input type="hidden" name="suggestion_id" value={row.id} />
-                    <Button type="submit" size="sm">Accepter</Button>
-                  </form>
-                  <form action={rejectPricingSuggestionAction}>
-                    <input type="hidden" name="suggestion_id" value={row.id} />
-                    <Button type="submit" size="sm" variant="ghost">Refuser</Button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 function HistoryTable({ rows }: { rows: PricingSuggestionWithMenu[] }) {
   if (rows.length === 0) {
@@ -185,6 +123,7 @@ export default async function PricingSuggestionsPage({ searchParams }: { searchP
   const snapshot = await getOnboardingSnapshot(user.id);
   const hasMenu = snapshot.menuItems.length > 0;
   const aiReady = isAnthropicConfigured();
+  const hasItemSalesData = await hasSquareItemSalesInLast30d(user.id);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -250,7 +189,7 @@ export default async function PricingSuggestionsPage({ searchParams }: { searchP
             </span>
           )}
         </div>
-        <SuggestionTable rows={pending} />
+        <PricingSuggestionsTable rows={pending} />
       </section>
 
       {/* History */}
@@ -258,6 +197,30 @@ export default async function PricingSuggestionsPage({ searchParams }: { searchP
         <h2 className="text-base font-semibold">Historique récent</h2>
         <HistoryTable rows={history} />
       </section>
+
+      <footer className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+        <p className="font-medium text-foreground/90">Comment est calculé le gain / mois ?</p>
+        <p className="mt-1.5 leading-relaxed">
+          Estimation indicative : (prix suggéré − prix actuel) ×{" "}
+          <strong className="font-medium text-foreground/80">quantités vendues sur les 30 derniers jours</strong>,
+          issues d&apos;un export caisse avec colonnes Date, Article et Quantité, associées à chaque plat du menu
+          (même logique de rapprochement de nom que pour le positionnement marché).
+        </p>
+        <p className="mt-1.5 leading-relaxed">
+          On suppose que le volume reste constant après l&apos;ajustement de prix (pas d&apos;élasticité).
+          {!hasItemSalesData ? (
+            <>
+              {" "}
+              Aucune vente par article détectée sur les 30 derniers jours : la colonne gain affiche « — ». Importez un
+              CSV détaillé depuis{" "}
+              <Link href="/dashboard/integrations/sales-csv" className="font-medium text-primary underline underline-offset-4">
+                Import ventes
+              </Link>
+              .
+            </>
+          ) : null}
+        </p>
+      </footer>
     </div>
   );
 }

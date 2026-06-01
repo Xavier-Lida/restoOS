@@ -3,29 +3,26 @@ import { type ProfileValue } from "@/lib/onboarding/types";
 export const profileOptions: Array<{
   value: ProfileValue;
   title: string;
-  subtitle: string;
-  guidance: string;
+  icon: string;
+  bullets: string[];
 }> = [
   {
     value: "dominant",
-    title: "Le Dominant",
-    subtitle: "Positionnement premium et prix affirmes",
-    guidance:
-      "Vous valorisez la qualite et assumez un positionnement haut de gamme pour proteger la perception de votre marque.",
+    title: "Dominant",
+    icon: "crown",
+    bullets: ["Positionnement premium", "Qualité avant volume", "Marque protégée"],
   },
   {
     value: "chasseur",
-    title: "Le Chasseur",
-    subtitle: "Conquete volume et agressivite commerciale",
-    guidance:
-      "Vous cherchez a capter le marche avec des prix competitifs pour faire grossir rapidement votre volume de ventes.",
+    title: "Chasseur",
+    icon: "zap",
+    bullets: ["Prix compétitifs", "Volume prioritaire", "Conquête de marché"],
   },
   {
     value: "securitaire",
-    title: "Le Securitaire",
-    subtitle: "Stabilite, previsibilite et maitrise du risque",
-    guidance:
-      "Vous privilegiez des ajustements prudents afin de conserver une trajectoire stable et previsible pour votre entreprise.",
+    title: "Sécuritaire",
+    icon: "shield",
+    bullets: ["Ajustements progressifs", "Trajectoire stable", "Zéro surprise"],
   },
 ];
 

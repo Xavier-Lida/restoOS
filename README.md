@@ -8,7 +8,7 @@ MVP pour RestoPrix : SaaS d’aide à la fixation des prix pour restaurateurs (Q
 |-------------------|------|
 | `app/` | Pages, layouts, routes API Next.js |
 | `components/` | UI React (onboarding, dashboard, admin) |
-| `lib/` | Clients Supabase, admin scrape, onboarding, intégrations (Square) |
+| `lib/` | Clients Supabase, admin scrape, onboarding, intégrations POS (import CSV ventes, factures fournisseur) |
 | `public/` | Assets statiques |
 | `supabase/` | Config projet / fonctions Edge (au besoin) |
 | `docs/sql/` | Schémas SQL à appliquer dans l’éditeur Supabase |
@@ -38,13 +38,15 @@ Voir `.env.example` pour le bucket menu onboarding (`NEXT_PUBLIC_ONBOARDING_MENU
 
 ## Schéma Supabase
 
-Dans l’éditeur SQL Supabase, exécuter **dans l’ordre** :
+**Fichier unique (recommandé) :** exécuter [`docs/sql/restoprix_full_schema.sql`](docs/sql/restoprix_full_schema.sql) dans le SQL Editor Supabase (reset + schéma complet en une fois).
 
-1. `docs/sql/onboarding_supabase.sql`
-2. `docs/sql/scrape_admin.sql`
-3. `docs/sql/square_supabase.sql` (rapports Square)
+**Alternative CLI :** `supabase/migrations/` (6 fichiers datés, même contenu découpé).
 
-Puis créer le bucket Storage pour les PDF d’onboarding si vous utilisez l’upload (section en fin de `onboarding_supabase.sql`).
+Les anciens scripts dans `docs/sql/onboarding_supabase.sql`, `docs/sql/square_supabase.sql`, `docs/sql/square_sales_items.sql`, `docs/sql/client_invoices.sql`, etc. sont **obsolètes** — utiliser uniquement `restoprix_full_schema.sql`.
+
+**Factures :** une seule intégration — **factures fournisseur** (`supplier_invoices`) pour les coûts matière. Pas de factures clients B2B dans le schéma actuel.
+
+**Ventes :** tables `pos_import_batches`, `pos_sale_lines`, `pos_daily_sales_reports`, vue `pos_sales_items_daily`. Import CSV via extraction IA (tout logiciel de caisse) avec repli heuristique dans `lib/pos/import-pos-sales-from-csv.ts`.
 
 ## Lancer l’app en local
 

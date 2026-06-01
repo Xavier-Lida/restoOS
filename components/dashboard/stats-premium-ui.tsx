@@ -113,26 +113,16 @@ export function StatsSection({ children, className }: { children: ReactNode; cla
 export function KpiCard({
   label,
   value,
-  delta,
-  up = true,
   spark,
 }: {
   label: string;
   value: string;
-  delta?: string;
-  up?: boolean;
   spark: ReactNode;
 }) {
   return (
     <Surf className="p-5">
       <p className="text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground/80">{label}</p>
       <p className="mt-2 text-[30px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{value}</p>
-      {delta ? (
-        <p className="mt-1.5 flex items-center gap-1.5 text-[12px]">
-          <span className={cn("tabular-nums", up ? "text-primary" : "text-red-400")}>{delta}</span>
-          <span className="text-muted-foreground/70">vs P-30</span>
-        </p>
-      ) : null}
       <div className="mt-3">{spark}</div>
     </Surf>
   );
@@ -142,10 +132,12 @@ export function BigStat({
   label,
   value,
   accent,
+  hint,
 }: {
   label: string;
   value: string;
   accent?: "emerald" | "amber" | "default";
+  hint?: string;
 }) {
   return (
     <Surf2 className="px-4 py-3">
@@ -160,6 +152,7 @@ export function BigStat({
       >
         {value}
       </p>
+      {hint ? <p className="mt-1 text-[11px] text-muted-foreground/75">{hint}</p> : null}
     </Surf2>
   );
 }

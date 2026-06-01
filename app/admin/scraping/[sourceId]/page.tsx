@@ -82,12 +82,27 @@ export default async function AdminScrapingDetailPage({
   let latestItems: ItemRow[] = [];
 
   if (itemsRunId) {
-    const { data: items } = await supabase
-      .from("scrape_run_items")
-      .select("id, item_name, category, price_cad, position, notes")
-      .eq("run_id", itemsRunId)
-      .order("position", { ascending: true });
-    latestItems = (items ?? []) as ItemRow[];
+    const { data: snapshot } = await supabase
+      .from("market_menu_snapshots")
+      .select("id")
+      .eq("scrape_run_id", itemsRunId)
+      .maybeSingle();
+
+    if (snapshot?.id) {
+      const { data: items } = await supabase
+        .from("market_menu_items")
+        .select("id, item_name, category, price_cad, position, description")
+        .eq("snapshot_id", snapshot.id)
+        .order("position", { ascending: true });
+      latestItems = (items ?? []).map((row) => ({
+        id: row.id as string,
+        item_name: row.item_name as string,
+        category: row.category as string,
+        price_cad: row.price_cad as number | null,
+        position: row.position as number,
+        notes: (row.description as string | null) ?? null,
+      }));
+    }
   }
 
   return (

@@ -34,9 +34,6 @@ export function OwnerForm({ defaultOwnerName }: OwnerFormProps) {
             toast.error(result.message);
             return;
           }
-          if (result.message) {
-            toast.success(result.message);
-          }
           if (result.redirectTo) {
             router.push(result.redirectTo);
           }
@@ -53,6 +50,8 @@ export function OwnerForm({ defaultOwnerName }: OwnerFormProps) {
           placeholder="Ex. Marie Tremblay"
           disabled={isPending}
           autoComplete="name"
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus
         />
         <p className="text-sm text-muted-foreground">
           Ce nom apparaîtra dans les recommandations et les messages de suivi.

@@ -154,11 +154,14 @@ function buildPreviewWithMeta(text: string, meta: ScrapeExtractionMeta): string 
 
 async function extractItemsSmart(fullText: string): Promise<{
   items: MinimalScrapeItem[];
+  marketItems: Awaited<ReturnType<typeof extractMenuItemsWithLlm>>["marketItems"];
+  restaurantMeta: Awaited<ReturnType<typeof extractMenuItemsWithLlm>>["restaurant"];
   meta: ScrapeExtractionMeta;
 }> {
   if (isAnthropicConfigured()) {
     const llm = await extractMenuItemsWithLlm(fullText);
     let items = llm.items;
+    let marketItems = llm.marketItems;
     let meta: ScrapeExtractionMeta = {
       method: "llm",
       model: llm.model,
@@ -176,11 +179,13 @@ async function extractItemsSmart(fullText: string): Promise<{
         };
       }
     }
-    return { items, meta };
+    return { items, marketItems, restaurantMeta: llm.restaurant, meta };
   }
 
   return {
     items: extractItemsFromPlainText(fullText),
+    marketItems: [],
+    restaurantMeta: undefined,
     meta: { method: "heuristic" },
   };
 }
@@ -188,6 +193,8 @@ async function extractItemsSmart(fullText: string): Promise<{
 export async function runMinimalHtmlScrape(url: string): Promise<{
   preview: string;
   items: MinimalScrapeItem[];
+  marketItems: Awaited<ReturnType<typeof extractMenuItemsWithLlm>>["marketItems"];
+  restaurantMeta: Awaited<ReturnType<typeof extractMenuItemsWithLlm>>["restaurant"];
   meta: ScrapeExtractionMeta;
 }> {
   const parsed = new URL(url);
@@ -235,19 +242,21 @@ export async function runMinimalHtmlScrape(url: string): Promise<{
         preview:
           "[PDF] Texte extrait tres court ou vide. Le fichier est peut-etre scanne (image) : il faudra OCR ou vision plus tard.",
         items: [],
+        marketItems: [],
+        restaurantMeta: undefined,
         meta,
       };
     }
 
-    const { items, meta } = await extractItemsSmart(normalized);
+    const { items, marketItems, restaurantMeta, meta } = await extractItemsSmart(normalized);
     const preview = buildPreviewWithMeta(normalized, meta);
-    return { preview, items, meta };
+    return { preview, items, marketItems, restaurantMeta, meta };
   }
 
   const html = new TextDecoder("utf-8", { fatal: false }).decode(arrayBuffer);
   const text = htmlToPlainText(html);
-  const { items, meta } = await extractItemsSmart(text);
+  const { items, marketItems, restaurantMeta, meta } = await extractItemsSmart(text);
   const preview = buildPreviewWithMeta(text, meta);
 
-  return { preview, items, meta };
+  return { preview, items, marketItems, restaurantMeta, meta };
 }

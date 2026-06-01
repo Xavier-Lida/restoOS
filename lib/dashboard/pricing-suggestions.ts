@@ -143,7 +143,7 @@ async function attachMenuLabels(
   }
   const ids = [...new Set(suggestions.map((s) => s.menu_item_id))];
   const { data: items, error } = await supabase
-    .from("restaurant_menu_items")
+    .from("menu_items")
     .select("id, item_name, category, price_cad")
     .in("id", ids);
 
@@ -166,6 +166,7 @@ async function attachMenuLabels(
 
 export type PricingSuggestionInsertRow = {
   user_id: string;
+  restaurant_id: string;
   menu_item_id: string;
   current_price_cad: number;
   suggested_price_cad: number;

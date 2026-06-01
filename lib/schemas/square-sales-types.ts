@@ -24,7 +24,7 @@ export const squareSaleItemRowSchema = z.object({
 
 export type SquareSaleItemRowValidated = z.infer<typeof squareSaleItemRowSchema>;
 
-/** Résumé journalier issu de `parseSquareSalesCsv` (ligne `square_sales_reports`). */
+/** Résumé journalier issu du parseur CSV (ligne `pos_daily_sales_reports`). */
 export const parsedSquareDailySummarySchema = z.object({
   periodStart: z.string().nullable(),
   periodEnd: z.string().nullable(),

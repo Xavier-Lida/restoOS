@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { actionFail, actionOk, type ActionResult } from "@/lib/form/action-result";
-import { getAuthedUser, getOrCreateOnboarding } from "@/lib/onboarding/server";
+import { createMenuVersion } from "@/lib/restaurant/menu-versions";
+import { getAuthedUser, getOrCreateOnboarding, getOnboardingSnapshot } from "@/lib/onboarding/server";
 import { profileValues } from "@/lib/onboarding/types";
 
 function readRequiredText(formData: FormData, field: string): string | null {
@@ -22,7 +23,7 @@ export async function saveOwnerAction(formData: FormData): Promise<ActionResult>
     }
 
     const { error } = await supabase
-      .from("restaurant_onboarding")
+      .from("restaurants")
       .update({ owner_name: ownerName })
       .eq("user_id", user.id);
 
@@ -39,11 +40,40 @@ export async function saveOwnerAction(formData: FormData): Promise<ActionResult>
 }
 
 const restaurantWizardColumns = [
-  "restaurant_name",
+  "display_name",
   "address_line",
   "city",
   "postal_code",
 ] as const;
+
+export async function saveRestaurantAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const { supabase, user } = await getAuthedUser();
+    await getOrCreateOnboarding(user.id);
+
+    const restaurantName = readRequiredText(formData, "restaurant_name");
+    if (!restaurantName) return actionFail("Le nom du restaurant est requis.");
+    const addressLine = readRequiredText(formData, "address_line");
+    if (!addressLine) return actionFail("L'adresse est requise.");
+    const city = readRequiredText(formData, "city");
+    if (!city) return actionFail("La ville est requise.");
+    const postalCode = readRequiredText(formData, "postal_code");
+    if (!postalCode) return actionFail("Le code postal est requis.");
+
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ display_name: restaurantName, address_line: addressLine, city, postal_code: postalCode })
+      .eq("user_id", user.id);
+
+    if (error) return actionFail(error.message);
+
+    revalidatePath("/onboarding");
+    return actionOk(undefined, "/onboarding/profile");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Une erreur est survenue.";
+    return actionFail(message);
+  }
+}
 
 export async function saveRestaurantWizardStepAction(formData: FormData): Promise<ActionResult> {
   try {
@@ -64,7 +94,7 @@ export async function saveRestaurantWizardStepAction(formData: FormData): Promis
     const column = restaurantWizardColumns[step];
 
     const { error } = await supabase
-      .from("restaurant_onboarding")
+      .from("restaurants")
       .update({ [column]: value })
       .eq("user_id", user.id);
 
@@ -106,7 +136,7 @@ export async function saveProfileAction(formData: FormData): Promise<ActionResul
     }
 
     const { error } = await supabase
-      .from("restaurant_onboarding")
+      .from("restaurants")
       .update({ dominant_profile: profileValue })
       .eq("user_id", user.id);
 
@@ -142,16 +172,16 @@ export async function addMenuItemAction(formData: FormData): Promise<ActionResul
     }
 
     const { data: currentItems } = await supabase
-      .from("restaurant_menu_items")
+      .from("menu_items")
       .select("position")
-      .eq("onboarding_id", onboarding.id)
+      .eq("restaurant_id", onboarding.id)
       .order("position", { ascending: false })
       .limit(1);
 
     const nextPosition = (currentItems?.[0]?.position ?? -1) + 1;
 
-    const { error } = await supabase.from("restaurant_menu_items").insert({
-      onboarding_id: onboarding.id,
+    const { error } = await supabase.from("menu_items").insert({
+      restaurant_id: onboarding.id,
       item_name: itemName,
       category,
       price_cad: priceCad,
@@ -183,10 +213,10 @@ export async function deleteMenuItemAction(formData: FormData): Promise<ActionRe
     }
 
     const { error } = await supabase
-      .from("restaurant_menu_items")
+      .from("menu_items")
       .delete()
       .eq("id", itemId)
-      .eq("onboarding_id", onboarding.id);
+      .eq("restaurant_id", onboarding.id);
 
     if (error) {
       return actionFail(error.message);
@@ -221,8 +251,12 @@ export async function updateMenuItemAction(formData: FormData): Promise<ActionRe
       return actionFail("Le prix doit être un nombre positif.");
     }
 
+    const snapshot = await getOnboardingSnapshot(user.id);
+    const previousItem = snapshot.menuItems.find((m) => m.id === itemId);
+    const priceChanged = previousItem != null && Number(previousItem.price_cad) !== priceCad;
+
     const { error } = await supabase
-      .from("restaurant_menu_items")
+      .from("menu_items")
       .update({
         item_name: itemName,
         category,
@@ -230,10 +264,21 @@ export async function updateMenuItemAction(formData: FormData): Promise<ActionRe
         notes,
       })
       .eq("id", itemId)
-      .eq("onboarding_id", onboarding.id);
+      .eq("restaurant_id", onboarding.id);
 
     if (error) {
       return actionFail(error.message);
+    }
+
+    if (priceChanged) {
+      const refreshed = await getOnboardingSnapshot(user.id);
+      await createMenuVersion({
+        supabase,
+        restaurantId: onboarding.id,
+        source: "manual",
+        createdBy: user.id,
+        menuItems: refreshed.menuItems,
+      });
     }
 
     revalidatePath("/onboarding");
@@ -252,9 +297,9 @@ async function swapMenuItemPosition(itemId: string, direction: "up" | "down"): P
     const { supabase, user } = await getAuthedUser();
     const onboarding = await getOrCreateOnboarding(user.id);
     const { data: items, error: listError } = await supabase
-      .from("restaurant_menu_items")
+      .from("menu_items")
       .select("id, position")
-      .eq("onboarding_id", onboarding.id)
+      .eq("restaurant_id", onboarding.id)
       .order("position", { ascending: true });
 
     if (listError) {
@@ -277,7 +322,7 @@ async function swapMenuItemPosition(itemId: string, direction: "up" | "down"): P
     ];
 
     const updateCalls = updates.map((entry) =>
-      supabase.from("restaurant_menu_items").update({ position: entry.position }).eq("id", entry.id),
+      supabase.from("menu_items").update({ position: entry.position }).eq("id", entry.id),
     );
     const [currentUpdate, targetUpdate] = await Promise.all(updateCalls);
 
@@ -316,20 +361,22 @@ export async function completeOnboardingAction(): Promise<ActionResult> {
     const { supabase, user } = await getAuthedUser();
     const onboarding = await getOrCreateOnboarding(user.id);
 
-    const { data: items } = await supabase
-      .from("restaurant_menu_items")
-      .select("id")
-      .eq("onboarding_id", onboarding.id)
-      .limit(1);
+    const snapshot = await getOnboardingSnapshot(user.id);
 
-    const hasMenu = Boolean(items?.length);
-
-    if (!hasMenu) {
+    if (snapshot.menuItems.length === 0) {
       return actionFail("Ajoutez au moins un plat au menu avant de terminer.");
     }
 
+    await createMenuVersion({
+      supabase,
+      restaurantId: onboarding.id,
+      source: "manual",
+      createdBy: user.id,
+      menuItems: snapshot.menuItems,
+    });
+
     const { error } = await supabase
-      .from("restaurant_onboarding")
+      .from("restaurants")
       .update({
         onboarding_status: "completed",
         completed_at: new Date().toISOString(),
