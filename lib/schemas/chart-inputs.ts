@@ -94,7 +94,7 @@ export type SquareItemSalesMixPoint = {
   quantity: number;
 };
 
-/** ROI RestoPrix : suggestion acceptée → gain mensuel estimé. */
+/** ROI RestoOs : suggestion acceptée → gain mensuel estimé. */
 export type PricingRoiSummary = {
   totalMonthlyGainCad: number;
   acceptedCount: number;

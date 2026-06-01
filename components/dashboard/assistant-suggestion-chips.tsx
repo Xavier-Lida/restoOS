@@ -1,6 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { ArrowRightIcon } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 type AssistantSuggestionChipsProps = {
@@ -21,19 +22,24 @@ export function AssistantSuggestionChips({
   if (items.length === 0) return null;
 
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
+    <div className={cn("flex flex-col gap-1.5", className)}>
       {items.map((item) => (
-        <Button
+        <button
           key={item}
           type="button"
-          variant={variant === "followup" ? "outline" : "secondary"}
-          size="sm"
           disabled={disabled}
-          className="h-auto max-w-full whitespace-normal px-3 py-1.5 text-left text-xs font-normal"
           onClick={() => onSelect(item)}
+          className={cn(
+            "flex w-fit items-center gap-2 rounded-full border px-3.5 py-1.5 text-left text-xs transition-colors",
+            variant === "followup"
+              ? "border-border/50 bg-transparent text-foreground/70 hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
+              : "border-border/50 bg-transparent text-foreground/70 hover:border-primary/40 hover:bg-primary/5 hover:text-foreground",
+            disabled && "cursor-default opacity-50",
+          )}
         >
-          {item}
-        </Button>
+          <ArrowRightIcon className="size-3 shrink-0 text-primary" />
+          <span>{item}</span>
+        </button>
       ))}
     </div>
   );

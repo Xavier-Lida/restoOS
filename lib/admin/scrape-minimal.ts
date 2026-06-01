@@ -206,7 +206,7 @@ export async function runMinimalHtmlScrape(url: string): Promise<{
     redirect: "follow",
     headers: {
       "User-Agent":
-        "RestoPrixAdminBot/0.1 (+https://restoprix.ca; contact: admin)",
+        "RestoOsAdminBot/0.1 (+https://restoos.ca; contact: admin)",
       "Accept-Language": "fr-CA,fr;q=0.9,en;q=0.8",
       Accept: "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8",
     },

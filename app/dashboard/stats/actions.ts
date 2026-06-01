@@ -2,7 +2,7 @@
 
 import { loadDishSalesSeriesBundle } from "@/lib/dashboard/dish-sales-series";
 import { loadAcceptedSuggestionsGain } from "@/lib/dashboard/pricing-suggestions-stats";
-import { getRestoprixSubscriptionCad } from "@/lib/dashboard/subscription-cad";
+import { getRestoOsSubscriptionCad } from "@/lib/dashboard/subscription-cad";
 import { getOnboardingSnapshot, getAuthedUser } from "@/lib/onboarding/server";
 import {
   computePeriodDelta,
@@ -72,7 +72,7 @@ export async function fetchSalesOverviewAction(range: RevenueRange): Promise<Sal
       taxes: computePeriodDelta(summary.totalTaxes, previousSummary.totalTaxes),
     },
     suggestions,
-    subscriptionCad: getRestoprixSubscriptionCad(),
+    subscriptionCad: getRestoOsSubscriptionCad(),
   };
 }
 

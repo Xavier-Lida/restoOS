@@ -196,7 +196,7 @@ export function StatsSourceBlock({ children }: { children: ReactNode }) {
 export function StatsFooter({ restaurantName }: { restaurantName: string }) {
   return (
     <footer className="flex items-center justify-between border-t border-border/50 pt-5 text-[11px] text-muted-foreground/60">
-      <span>Données réelles · RestoPrix</span>
+      <span>Données réelles · RestoOs</span>
       <span className="text-primary/80">{restaurantName}</span>
     </footer>
   );

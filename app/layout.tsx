@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RestoPrix",
+  title: "RestoOs",
   description: "Intelligence concurrentielle et optimisation de prix pour restaurateurs",
 };
 

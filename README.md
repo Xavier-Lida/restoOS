@@ -1,6 +1,6 @@
-# RestoPrix
+# RestoOs
 
-MVP pour RestoPrix : SaaS d’aide à la fixation des prix pour restaurateurs (Québec). **Application 100 % Next.js** (App Router) avec Supabase (auth, données, Storage).
+MVP pour RestoOs : SaaS d’aide à la fixation des prix pour restaurateurs (Québec). **Application 100 % Next.js** (App Router) avec Supabase (auth, données, Storage).
 
 ## Structure du dépôt
 

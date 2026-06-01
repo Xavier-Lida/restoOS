@@ -16,7 +16,7 @@ Brief pour **Claude Design** (ou tout redesign UI) : inventaire des graphiques, 
 
 ## Contexte produit
 
-RestoPrix aide les restaurateurs québécois à fixer leurs prix. La page **Statistiques** regroupe :
+RestoOs aide les restaurateurs québécois à fixer leurs prix. La page **Statistiques** regroupe :
 
 1. **Ventes POS** (import CSV Square)
 2. **Facturation B2B** (factures clients importées)
@@ -165,7 +165,7 @@ Dans l’en-tête de la section Square :
 - Transactions (total)
 - Taxes (période)
 
-#### 1.4 ROI RestoPrix (pas graphique)
+#### 1.4 ROI RestoOs (pas graphique)
 
 **Fichier** : [`roi-card.tsx`](../components/dashboard/roi-card.tsx)
 
@@ -492,7 +492,7 @@ Colonnes : Plat, Action (badge), Prix (actuel → suggéré si A1), IRR, SPM.
 7. **Hiérarchie typographique** : titres `text-lg` répétés ; peu de distinction section vs sous-graphique.
 8. **Mobile** : barres horizontales avec `width={240}` Y-axis — risque overflow / labels coupés.
 9. **Accessibilité** : couleurs seules pour seuils IRR/SPM — ajouter icônes ou patterns.
-10. **ROI** : bloc texte — opportunité visualisation forte (argument vente RestoPrix).
+10. **ROI** : bloc texte — opportunité visualisation forte (argument vente RestoOs).
 
 ---
 
@@ -557,4 +557,4 @@ Colonnes : Plat, Action (badge), Prix (actuel → suggéré si A1), IRR, SPM.
 
 ---
 
-*Document généré pour RestoPrix — reflète l’implémentation au moment de la rédaction. Mettre à jour ce fichier si les composants dans `components/dashboard/` changent.*
+*Document généré pour RestoOs — reflète l’implémentation au moment de la rédaction. Mettre à jour ce fichier si les composants dans `components/dashboard/` changent.*

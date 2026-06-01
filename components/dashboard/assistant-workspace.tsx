@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { AssistantBetaBadge } from "@/components/dashboard/assistant-beta-badge";
 import { AssistantChartCard } from "@/components/dashboard/assistant-chart-card";
 import { AssistantChatPanel } from "@/components/dashboard/assistant-chat-panel";
 import { Button } from "@/components/ui/button";
 import { consumeAssistantStream } from "@/lib/assistant/consume-assistant-stream";
 import { clearAssistantState, loadAssistantState, saveAssistantState } from "@/lib/assistant/storage";
+import { useSmoothedStream } from "@/lib/hooks/use-smoothed-stream";
 import type {
   AssistantChatMessage,
   AssistantTurnDone,
@@ -14,7 +16,11 @@ import type {
 } from "@/lib/schemas/assistant-turn";
 import { cn } from "@/lib/utils";
 
-export function AssistantWorkspace() {
+type AssistantWorkspaceProps = {
+  restaurantName: string;
+};
+
+export function AssistantWorkspace({ restaurantName }: AssistantWorkspaceProps) {
   const [hydrated, setHydrated] = useState(false);
   const [messages, setMessages] = useState<AssistantChatMessage[]>([]);
   const [charts, setCharts] = useState<StoredAssistantChart[]>([]);
@@ -28,9 +34,11 @@ export function AssistantWorkspace() {
   const turnIndexRef = useRef(0);
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const smoothedContent = useSmoothedStream(streamingContent);
+
   const hasConversation =
     messages.some((m) => m.role === "assistant") ||
-    (streamingContent !== null && streamingContent.length > 0);
+    (smoothedContent !== null && smoothedContent.length > 0);
   const hasCharts = charts.length > 0;
 
   useEffect(() => {
@@ -43,21 +51,30 @@ export function AssistantWorkspace() {
     setHydrated(true);
   }, []);
 
-  const schedulePersist = useCallback((nextMessages: AssistantChatMessage[], nextCharts: StoredAssistantChart[]) => {
-    if (persistTimerRef.current) {
-      clearTimeout(persistTimerRef.current);
-    }
+  // Persist whenever messages or charts change (debounced)
+  useEffect(() => {
+    if (!hydrated) return;
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
     persistTimerRef.current = setTimeout(() => {
-      saveAssistantState({
-        messages: nextMessages,
-        charts: nextCharts,
-        updatedAt: new Date().toISOString(),
-      });
+      saveAssistantState({ messages, charts, updatedAt: new Date().toISOString() });
     }, 300);
-  }, []);
+  }, [messages, charts, hydrated]);
+
+  const schedulePersist = useCallback(
+    (nextMessages: AssistantChatMessage[], nextCharts: StoredAssistantChart[]) => {
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+      persistTimerRef.current = setTimeout(() => {
+        saveAssistantState({ messages: nextMessages, charts: nextCharts, updatedAt: new Date().toISOString() });
+      }, 300);
+    },
+    [],
+  );
 
   const handleNewChat = useCallback(() => {
-    if (messages.length > 0 && !window.confirm("Démarrer une nouvelle discussion ? L'historique local sera effacé.")) {
+    if (
+      messages.length > 0 &&
+      !window.confirm("Démarrer une nouvelle discussion ? L'historique local sera effacé.")
+    ) {
       return;
     }
     clearAssistantState();
@@ -90,22 +107,20 @@ export function AssistantWorkspace() {
         createdAt: new Date().toISOString(),
       }));
 
-      setMessages((prev) => {
-        const nextMsgs = [...prev, assistantMessage];
-        setCharts((prevCharts) => {
-          const nextCharts = stamped.length > 0 ? [...prevCharts, ...stamped] : prevCharts;
-          schedulePersist(nextMsgs, nextCharts);
-          return nextCharts;
-        });
-        return nextMsgs;
-      });
+      // Keep setMessages and setCharts as separate calls — never nest setState
+      // inside another updater; React Strict Mode runs updaters twice and would
+      // duplicate the charts.
+      setMessages((prev) => [...prev, assistantMessage]);
+      if (stamped.length > 0) {
+        setCharts((prev) => [...prev, ...stamped]);
+      }
 
       setChips(done.suggestions);
       setFollowUps(done.followUpQuestions);
       setStreamingContent(null);
       setStatusMessage(null);
     },
-    [schedulePersist],
+    [],
   );
 
   const sendMessage = useCallback(
@@ -141,9 +156,7 @@ export function AssistantWorkspace() {
             setStreamingContent(streamAccum);
             setStatusMessage(null);
           },
-          onDone: (payload) => {
-            applyTurnDone(payload);
-          },
+          onDone: (payload) => applyTurnDone(payload),
           onError: (message) => {
             setError(message);
             setMessages(messages);
@@ -163,15 +176,9 @@ export function AssistantWorkspace() {
     [applyTurnDone, busy, messages],
   );
 
-  const handleSend = useCallback(() => {
-    void sendMessage(input);
-  }, [input, sendMessage]);
-
+  const handleSend = useCallback(() => void sendMessage(input), [input, sendMessage]);
   const handleChipSelect = useCallback(
-    (text: string) => {
-      setInput(text);
-      void sendMessage(text);
-    },
+    (text: string) => { setInput(text); void sendMessage(text); },
     [sendMessage],
   );
 
@@ -183,9 +190,31 @@ export function AssistantWorkspace() {
     );
   }
 
+  if (!hasConversation) {
+    return (
+      <AssistantChatPanel
+        messages={messages}
+        streamingContent={smoothedContent}
+        statusMessage={statusMessage}
+        busy={busy}
+        error={error}
+        chips={chips}
+        followUps={followUps}
+        input={input}
+        onInputChange={setInput}
+        onSend={handleSend}
+        onChipSelect={handleChipSelect}
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-end">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-semibold tracking-tight text-foreground/80">Assistant IA</h1>
+          <AssistantBetaBadge />
+        </div>
         <Button type="button" variant="outline" size="sm" onClick={handleNewChat} disabled={busy}>
           Nouvelle discussion
         </Button>
@@ -194,62 +223,36 @@ export function AssistantWorkspace() {
       <div
         className={cn(
           "grid min-h-[min(72vh,720px)] gap-6 transition-[grid-template-columns] duration-300 ease-out",
-          hasConversation
-            ? "lg:grid-cols-[1fr_min(380px,32%)]"
-            : "grid-cols-1",
+          hasCharts ? "lg:grid-cols-[1fr_min(380px,32%)]" : "grid-cols-1",
         )}
       >
-        {hasConversation ? (
-          <section
-            className={cn(
-              "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-card/40",
-              hasCharts ? "opacity-100" : "hidden lg:flex lg:opacity-100",
-            )}
-            aria-label="Graphiques"
-          >
+        {hasCharts ? (
+          <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-card/40">
             <div className="flex-1 overflow-y-auto p-4">
-              {hasCharts ? (
-                <div className="mx-auto flex max-w-2xl flex-col gap-6">
-                  {charts.map((chart) => (
-                    <AssistantChartCard key={`${chart.id}-${chart.createdAt}`} chart={chart} />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex h-full min-h-[200px] items-center justify-center px-6 text-center text-sm text-muted-foreground">
-                  Les graphiques apparaîtront ici lorsqu&apos;ils accompagneront une réponse.
-                </div>
-              )}
+              <div className="mx-auto flex max-w-2xl flex-col gap-6">
+                {charts.map((chart) => (
+                  <AssistantChartCard key={`${chart.id}-${chart.createdAt}`} chart={chart} />
+                ))}
+              </div>
             </div>
           </section>
         ) : null}
 
-        <section
-          className={cn(
-            "flex min-h-0 flex-col",
-            hasConversation ? "lg:max-h-[min(72vh,720px)]" : "mx-auto w-full max-w-xl justify-center",
-          )}
-        >
-          <div
-            className={cn(
-              "flex min-h-[min(72vh,720px)] flex-col rounded-xl border border-border/70 bg-card p-4",
-              !hasConversation && "shadow-sm",
-            )}
-          >
-            <AssistantChatPanel
-              messages={messages}
-              streamingContent={streamingContent}
-              statusMessage={statusMessage}
-              busy={busy}
-              error={error}
-              chips={chips}
-              followUps={followUps}
-              input={input}
-              onInputChange={setInput}
-              onSend={handleSend}
-              onChipSelect={handleChipSelect}
-              compact={hasConversation}
-            />
-          </div>
+        <section className="flex min-h-0 h-[min(72vh,720px)] flex-col overflow-hidden rounded-xl border border-border/70 bg-card p-4">
+          <AssistantChatPanel
+            messages={messages}
+            streamingContent={smoothedContent}
+            statusMessage={statusMessage}
+            busy={busy}
+            error={error}
+            chips={chips}
+            followUps={followUps}
+            input={input}
+            onInputChange={setInput}
+            onSend={handleSend}
+            onChipSelect={handleChipSelect}
+            compact
+          />
         </section>
       </div>
     </div>

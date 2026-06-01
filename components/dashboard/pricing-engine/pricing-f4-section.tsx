@@ -28,7 +28,7 @@ export async function PricingF4Section({
         num="04"
         kicker="F4 · Repricing"
         title="Alertes & prix proposés"
-        subtitle="Pour chaque item : zone plancher → plafond, cible RestoPrix, prix actuel et prix proposé."
+        subtitle="Pour chaque item : zone plancher → plafond, cible RestoOs, prix actuel et prix proposé."
         right={
           <>
             {alertCount > 0 ? (

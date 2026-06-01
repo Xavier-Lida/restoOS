@@ -130,7 +130,7 @@ const HeaderB = ({ D }) => {
             Bonjour <span className="font-serif italic font-normal" style={{ color: "var(--emerald-2)" }}>{D.user}</span>
           </h1>
           <p className="mt-3 text-[15px] leading-relaxed max-w-[600px]" style={{ color: "var(--muted)" }}>
-            Vos ventes Square, la facturation B2B, le menu et le ROI RestoPrix, agrégés en une seule lecture.
+            Vos ventes Square, la facturation B2B, le menu et le ROI RestoOs, agrégés en une seule lecture.
             Choisissez la fenêtre temporelle ci-dessus.
           </p>
         </div>
@@ -318,9 +318,9 @@ const RoiB = ({ D }) => {
   const r = D.roi;
   return (
     <section>
-      <SecTitleB num="02" kicker="RestoPrix · retour sur abonnement"
+      <SecTitleB num="02" kicker="RestoOs · retour sur abonnement"
         title="Votre ROI sur 30 jours"
-        sub="Marge additionnelle attribuée aux décisions RestoPrix après déduction de l'abonnement."/>
+        sub="Marge additionnelle attribuée aux décisions RestoOs après déduction de l'abonnement."/>
       <div className="surf p-7">
         <div className="grid grid-cols-12 gap-7">
           <div className="col-span-5">
@@ -513,7 +513,7 @@ const F4B = ({ D }) => {
     <section>
       <SecTitleB num="04" kicker="F4 · Repricing"
         title="Alertes & prix proposés"
-        sub="Pour chaque item : la zone plancher → plafond, la cible RestoPrix, votre prix actuel et le prix proposé."
+        sub="Pour chaque item : la zone plancher → plafond, la cible RestoOs, votre prix actuel et le prix proposé."
         right={
           <div className="flex items-center gap-2">
             <span className="chip" style={{ color: "var(--amber)", borderColor: "rgba(217,154,74,.4)" }}>

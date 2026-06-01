@@ -111,7 +111,7 @@ function DisconnectedState() {
     <div className="flex flex-col gap-4">
       <h2 className="text-lg font-medium">Pas encore connecté</h2>
       <p className="text-sm text-muted-foreground">
-        Tu seras redirigé vers Lightspeed pour autoriser l&apos;accès. RestoPrix demande uniquement les
+        Tu seras redirigé vers Lightspeed pour autoriser l&apos;accès. RestoOs demande uniquement les
         permissions nécessaires (lecture du menu et des reçus).
       </p>
       <form action="/auth/lightspeed/start" method="post">

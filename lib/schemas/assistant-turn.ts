@@ -93,4 +93,4 @@ export type AssistantPersistedState = {
   updatedAt: string;
 };
 
-export const ASSISTANT_STORAGE_KEY = "restoprix:assistant:v1";
+export const ASSISTANT_STORAGE_KEY = "restoos:assistant:v1";

@@ -26,7 +26,7 @@ export function StepShell({
       {/* Header nav */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold tracking-tight text-foreground">RestoPrix</p>
+          <p className="text-sm font-semibold tracking-tight text-foreground">RestoOs</p>
           <p className="text-xs tabular-nums text-muted-foreground">
             {safeIndex + 1} / {totalSteps}
           </p>

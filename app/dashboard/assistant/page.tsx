@@ -1,13 +1,11 @@
 import { AssistantWorkspace } from "@/components/dashboard/assistant-workspace";
+import { getAuthedUser, getOnboardingSnapshot } from "@/lib/onboarding/server";
 
-export default function DashboardAssistantPage() {
-  return (
-    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 pb-10">
-      <header className="flex flex-col gap-2">
-        <p className="text-sm text-muted-foreground">Assistant IA</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Conseiller RestOS</h1>
-      </header>
-      <AssistantWorkspace />
-    </div>
-  );
+export default async function DashboardAssistantPage() {
+  const { user } = await getAuthedUser();
+  const snapshot = await getOnboardingSnapshot(user.id);
+  const restaurantName =
+    snapshot.onboarding.restaurant_name ?? snapshot.onboarding.display_name ?? "votre restaurant";
+
+  return <AssistantWorkspace restaurantName={restaurantName} />;
 }

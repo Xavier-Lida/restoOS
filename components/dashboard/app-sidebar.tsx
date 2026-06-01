@@ -10,18 +10,20 @@ import {
   FileTextIcon,
   LogOutIcon,
   PlugIcon,
+  Settings2Icon,
   ShieldIcon,
   SparklesIcon,
   UtensilsCrossedIcon,
 } from "lucide-react";
 
+import { AssistantBetaBadge } from "@/components/dashboard/assistant-beta-badge";
 import { cn } from "@/lib/utils";
 
 const navMain = [
   { href: "/dashboard/stats", label: "Statistiques", icon: BarChart3Icon },
   { href: "/dashboard/pricing-suggestions", label: "Suggestions de prix", icon: SparklesIcon },
   { href: "/dashboard/menu", label: "Menu", icon: UtensilsCrossedIcon },
-  { href: "/dashboard/assistant", label: "Assistant IA", icon: BotMessageSquareIcon },
+  { href: "/dashboard/assistant", label: "Assistant IA", icon: BotMessageSquareIcon, showBeta: true },
 ] as const;
 
 const navIntegrations = [
@@ -40,12 +42,14 @@ function NavItem({
   icon: Icon,
   isActive,
   isOpen,
+  showBeta,
 }: {
   href: string;
   label: string;
   icon: React.ElementType;
   isActive: boolean;
   isOpen: boolean;
+  showBeta?: boolean;
 }) {
   return (
     <Link
@@ -61,11 +65,12 @@ function NavItem({
       <Icon className="h-4 w-4 shrink-0" />
       <span
         className={cn(
-          "whitespace-nowrap overflow-hidden transition-all duration-200",
+          "flex min-w-0 flex-1 items-center gap-2 overflow-hidden whitespace-nowrap transition-all duration-200",
           isOpen ? "opacity-100 w-auto" : "w-0 opacity-0",
         )}
       >
         {label}
+        {isOpen && showBeta ? <AssistantBetaBadge /> : null}
       </span>
     </Link>
   );
@@ -105,6 +110,7 @@ export function AppSidebar({ showAdminLink }: AppSidebarProps) {
             icon={item.icon}
             isActive={pathname === item.href}
             isOpen={isOpen}
+            showBeta={"showBeta" in item ? item.showBeta : undefined}
           />
         ))}
 
@@ -125,6 +131,13 @@ export function AppSidebar({ showAdminLink }: AppSidebarProps) {
 
       {/* Footer */}
       <div className="flex flex-col gap-0.5 border-t border-sidebar-border p-2">
+        <NavItem
+          href="/dashboard/settings"
+          label="Paramètres"
+          icon={Settings2Icon}
+          isActive={pathname.startsWith("/dashboard/settings")}
+          isOpen={isOpen}
+        />
         {showAdminLink && (
           <NavItem
             href="/admin/scraping"

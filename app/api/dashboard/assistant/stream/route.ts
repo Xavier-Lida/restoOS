@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
         const bundle = await loadAssistantDataBundle(user.id);
 
-        emit({ phase: "status", message: "J'analyse le contexte RestoPrix…" });
+        emit({ phase: "status", message: "J'analyse le contexte RestoOs…" });
 
         const system = buildAssistantSystemPrompt({
           snapshot: bundle.snapshot,

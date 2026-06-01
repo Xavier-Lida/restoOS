@@ -3,7 +3,7 @@ import "server-only";
 import { profileOptions } from "@/lib/onboarding/constants";
 import type { OnboardingSnapshot } from "@/lib/onboarding/types";
 
-const APP_PURPOSE = `RestoPrix aide les restaurateurs au Canada à optimiser leurs prix grâce à l'intelligence concurrentielle, aux suggestions de prix et à l'import de données de ventes (Square, CSV).`;
+const APP_PURPOSE = `RestoOs aide les restaurateurs au Canada à optimiser leurs prix grâce à l'intelligence concurrentielle, aux suggestions de prix et à l'import de données de ventes (Square, CSV).`;
 
 export function buildAssistantSystemPrompt(params: {
   snapshot: OnboardingSnapshot;
@@ -30,7 +30,7 @@ export function buildAssistantSystemPrompt(params: {
       : "(Aucun item menu enregistré pour le moment.)";
 
   return [
-    `Tu es l'assistant RestoPrix. Réponds en français, de façon concise et actionnable.`,
+    `Tu es l'assistant RestoOs. Réponds en français, de façon concise et actionnable.`,
     ``,
     `## Rôle du produit`,
     APP_PURPOSE,
@@ -60,7 +60,7 @@ export function buildAssistantSystemPrompt(params: {
     `- Mets les noms de plats et de restaurants en italique : *Poutine classique*, *${onboarding.restaurant_name ?? "votre établissement"}*.`,
     ``,
     `## Périmètre et refus`,
-    `- Hors sujet (recettes perso, code, politique, météo, etc.) : appelle finalize_turn avec refused=true, refusalKind=off_topic, et explique brièvement dans le texte que tu ne peux répondre qu'aux sujets RestoPrix (menu, prix, ventes, marché, suggestions).`,
+    `- Hors sujet (recettes perso, code, politique, météo, etc.) : appelle finalize_turn avec refused=true, refusalKind=off_topic, et explique brièvement dans le texte que tu ne peux répondre qu'aux sujets RestoOs (menu, prix, ventes, marché, suggestions).`,
     `- Sujet légitime mais données absentes${hasSalesData === false ? " (ex. ventes : aucun import POS)" : ""}${hasMarketData === false ? " (ex. marché : pas de scrape)" : ""} : refused=true, refusalKind=missing_data ; indique quoi importer ou configurer.`,
     `- Ne fabrique jamais de chiffres de vente ou de prix concurrents non présents ci-dessus.`,
     `- Après ta réponse texte, appelle toujours l'outil finalize_turn (chartIds uniquement si un graphique aide vraiment ; sinon tableau vide).`,

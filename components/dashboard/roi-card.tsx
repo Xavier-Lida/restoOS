@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { BigStat, SecHeader, Surf, StatsSection } from "@/components/dashboard/stats-premium-ui";
 
 const cadFormatter = new Intl.NumberFormat("fr-CA", {
@@ -22,6 +24,7 @@ type RoiState =
       acceptedCount: number;
       subscriptionCad: number;
       ratio: number;
+      netRoiCad: number;
     };
 
 function classify({
@@ -40,6 +43,7 @@ function classify({
     acceptedCount,
     subscriptionCad,
     ratio: monthlyGainCad / subscriptionCad,
+    netRoiCad: monthlyGainCad - subscriptionCad,
   };
 }
 
@@ -49,7 +53,7 @@ export function RoiCard(props: RoiCardProps) {
     <StatsSection>
       <SecHeader
         num="02"
-        kicker="RestoPrix · retour sur abonnement"
+        kicker="RestoOs · retour sur abonnement"
         title="Votre ROI"
       />
       {state.kind === "no-data" ? (
@@ -61,6 +65,36 @@ export function RoiCard(props: RoiCardProps) {
   );
 }
 
+function RoiLayout({
+  heroValue,
+  heroHint,
+  surfClassName,
+  footer,
+  children,
+}: {
+  heroValue: string;
+  heroHint?: string;
+  surfClassName?: string;
+  footer?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Surf className={surfClassName ?? "p-7"}>
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-8">
+        <aside className="flex shrink-0 flex-col justify-center lg:min-w-[200px] lg:max-w-[280px] lg:border-r lg:border-border/60 lg:pr-8">
+          <p className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground/80">ROI</p>
+          <p className="mt-2 font-serif text-[clamp(44px,5vw,60px)] italic leading-none text-primary tabular-nums">
+            {heroValue}
+          </p>
+          {heroHint ? <p className="mt-2 text-[13px] text-muted-foreground">{heroHint}</p> : null}
+        </aside>
+        <div className="grid flex-1 grid-cols-2 gap-3">{children}</div>
+      </div>
+      {footer ? <div className="mt-6">{footer}</div> : null}
+    </Surf>
+  );
+}
+
 function NoDataState({
   subscriptionCad,
   restaurantProfitCad,
@@ -69,57 +103,59 @@ function NoDataState({
   restaurantProfitCad: number | null;
 }) {
   return (
-    <Surf className="border-dashed p-7">
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <BigStat
-          label="Profit du restaurant"
-          value={
-            restaurantProfitCad != null ? cadFormatter.format(restaurantProfitCad) : "—"
-          }
-          hint={restaurantProfitCad == null ? "Importez vos ventes CSV" : "Ventes nettes · période"}
-        />
-        <BigStat label="Profit dû aux changements" value="—" hint="Acceptez des suggestions de prix" />
-        <BigStat label="Coût du logiciel" value={cadFormatter.format(subscriptionCad)} />
-        <BigStat label="ROI" value="—" />
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Connectez votre menu et acceptez vos premières suggestions de prix pour calculer votre ROI.
-      </p>
-      <code className="mt-4 block rounded-lg border border-border bg-popover p-3 text-xs text-muted-foreground">
-        ROI = profit dû aux changements / {cadFormatter.format(subscriptionCad)}
-      </code>
-    </Surf>
+    <RoiLayout
+      heroValue="—"
+      surfClassName="border-dashed p-7"
+      footer={
+        <>
+          <p className="text-sm text-muted-foreground">
+            Connectez votre menu et acceptez vos premières suggestions de prix pour calculer votre ROI.
+          </p>
+          <code className="mt-4 block rounded-lg border border-border bg-popover p-3 text-xs text-muted-foreground">
+            ROI net = profit dû aux changements − {cadFormatter.format(subscriptionCad)}
+          </code>
+        </>
+      }
+    >
+      <BigStat
+        label="Profit du restaurant"
+        value={restaurantProfitCad != null ? cadFormatter.format(restaurantProfitCad) : "—"}
+        hint={restaurantProfitCad == null ? "Importez vos ventes CSV" : "Ventes nettes · période"}
+      />
+      <BigStat label="Profit dû aux changements" value="—" hint="Acceptez des suggestions de prix" />
+      <BigStat label="Coût du logiciel" value={cadFormatter.format(subscriptionCad)} />
+      <BigStat label="ROI" value="—" />
+    </RoiLayout>
   );
 }
 
 function ReadyState({ state }: { state: Extract<RoiState, { kind: "ready" }> }) {
   return (
-    <Surf className="p-7">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <BigStat
-          label="Profit du restaurant"
-          value={
-            state.restaurantProfitCad != null
-              ? cadFormatter.format(state.restaurantProfitCad)
-              : "—"
-          }
-          hint="Ventes nettes · période (proxy)"
-        />
-        <BigStat
-          label="Profit dû aux changements"
-          value={`+ ${cadFormatter.format(state.monthlyGainCad)}`}
-          accent="emerald"
-          hint={`${state.acceptedCount} suggestion${state.acceptedCount > 1 ? "s" : ""} acceptée${state.acceptedCount > 1 ? "s" : ""}`}
-        />
-        <BigStat label="Coût du logiciel" value={cadFormatter.format(state.subscriptionCad)} />
-        <BigStat label="ROI" value={`${state.ratio.toFixed(1)}×`} accent="emerald" hint="sur l'abonnement" />
-      </div>
-      <p className="mt-6 text-center font-serif text-[32px] italic text-primary tabular-nums">
-        {state.ratio.toFixed(1)}×
-      </p>
-      <p className="mt-1 text-center text-[13px] text-muted-foreground">
-        retour sur investissement · abonnement RestoPrix
-      </p>
-    </Surf>
+    <RoiLayout
+      heroValue={`${state.ratio.toFixed(1)}×`}
+    >
+      <BigStat
+        label="Profit du restaurant"
+        value={
+          state.restaurantProfitCad != null
+            ? cadFormatter.format(state.restaurantProfitCad)
+            : "—"
+        }
+        hint="Ventes nettes"
+      />
+      <BigStat
+        label="Profit dû aux changements"
+        value={`+ ${cadFormatter.format(state.monthlyGainCad)}`}
+        accent="emerald"
+        hint={`${state.acceptedCount} suggestion${state.acceptedCount > 1 ? "s" : ""} acceptée${state.acceptedCount > 1 ? "s" : ""}`}
+      />
+      <BigStat label="Coût du logiciel" value={cadFormatter.format(state.subscriptionCad)} />
+      <BigStat
+        label="ROI"
+        value={`+ ${cadFormatter.format(state.netRoiCad)}`}
+        accent="emerald"
+        hint="gain net · après abonnement"
+      />
+    </RoiLayout>
   );
 }
