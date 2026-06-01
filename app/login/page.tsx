@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { LoginView } from "@/components/login-view";
@@ -25,22 +27,39 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   const params = (await searchParams) ?? {};
-  const errorMessage = params.error;
-  const successMessage = params.success;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center px-6 py-16">
-      <div className="flex max-w-xl flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <p className="text-sm text-muted-foreground">Auth Supabase</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Connexion restaurateur</h1>
-          <p className="text-muted-foreground">
-            Connectez-vous pour accéder au dashboard RestoPrix.
+    <div
+      className="flex min-h-screen flex-col items-center justify-center px-4 py-16"
+      style={{ background: "#0f1910" }}
+    >
+      {/* Logo */}
+      <Link href="/">
+        <Image
+          src="/logo/restoOS-logo-transparent-2400.png"
+          alt="RestoOs"
+          width={280}
+          height={72}
+          className="object-contain"
+        />
+      </Link>
+
+      {/* Card */}
+      <div
+        className="w-full max-w-sm rounded-2xl border p-8 shadow-2xl"
+        style={{ background: "#131f18", borderColor: "rgba(255,255,255,0.08)" }}
+      >
+        <div className="mb-6 flex flex-col gap-1">
+          <h1 className="text-xl font-bold" style={{ color: "#ffffff" }}>
+            Bienvenue
+          </h1>
+          <p className="text-sm" style={{ color: "#9cb0a5" }}>
+            Connectez-vous à votre espace RestoOs.
           </p>
         </div>
 
-        <LoginView errorMessage={errorMessage} successMessage={successMessage} />
+        <LoginView initialError={params.error} initialSuccess={params.success} />
       </div>
-    </main>
+    </div>
   );
 }
