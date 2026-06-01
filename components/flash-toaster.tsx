@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export type FlashPayload = {
-  variant: "success" | "error" | "info";
+  variant: "success" | "error" | "info" | "warning";
   message: string;
 };
 
@@ -33,6 +33,8 @@ export function FlashToaster({ flashes }: FlashToasterProps) {
         toast.success(flash.message);
       } else if (flash.variant === "error") {
         toast.error(flash.message);
+      } else if (flash.variant === "warning") {
+        toast.warning(flash.message);
       } else {
         toast.message(flash.message);
       }

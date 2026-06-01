@@ -83,38 +83,37 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-/* DaisyUI forest–inspired palette (DESIGN.md) — dark default */
 .dark {
-  --background: #171212;
+  --background: #0f1910;
   --foreground: #e8ede9;
-  --card: #1f2825;
+  --card: #131f18;
   --card-foreground: #e8ede9;
-  --popover: #1c2220;
+  --popover: #0e1810;
   --popover-foreground: #e8ede9;
   --primary: #1eb854;
   --primary-foreground: #0a0f0d;
-  --secondary: #1db88e;
-  --secondary-foreground: #061210;
-  --muted: #2a3832;
+  --secondary: #1a2820;
+  --secondary-foreground: #e8ede9;
+  --muted: #162018;
   --muted-foreground: #9cb0a5;
-  --accent: #1db8ab;
-  --accent-foreground: #061210;
+  --accent: #1e2e22;
+  --accent-foreground: #e8ede9;
   --destructive: #fb7185;
-  --border: #2f3d36;
-  --input: #2f3d36;
+  --border: #232d24;
+  --input: #0e1810;
   --ring: #1eb854;
   --chart-1: #1eb854;
   --chart-2: #1db88e;
   --chart-3: #5eead4;
   --chart-4: #6b8f7e;
   --chart-5: #c4b5a0;
-  --sidebar: #19362d;
-  --sidebar-foreground: #e8f0eb;
+  --sidebar: #0f1910;
+  --sidebar-foreground: #e8ede9;
   --sidebar-primary: #1eb854;
   --sidebar-primary-foreground: #0a0f0d;
-  --sidebar-accent: #24302c;
+  --sidebar-accent: #1e2e22;
   --sidebar-accent-foreground: #e8ede9;
-  --sidebar-border: #2f3d36;
+  --sidebar-border: #232d24;
   --sidebar-ring: #1eb854;
 }
 

@@ -65,9 +65,8 @@ export function LoginView({ initialError, initialSuccess }: LoginViewProps) {
       className="flex flex-col gap-4"
       noValidate
     >
-      {/* Email */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-sm font-medium" style={{ color: "#c4d4cc" }}>
+        <label htmlFor="email" className="text-sm font-medium text-foreground/80">
           Email
         </label>
         <input
@@ -78,18 +77,12 @@ export function LoginView({ initialError, initialSuccess }: LoginViewProps) {
           autoComplete="email"
           disabled={loading}
           placeholder="vous@restaurant.com"
-          className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-all focus:border-[#1eb854] disabled:opacity-50"
-          style={{
-            background: "#0e1810",
-            borderColor: "rgba(255,255,255,0.1)",
-            color: "#e8ede9",
-          }}
+          className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/50 focus:border-primary disabled:opacity-50"
         />
       </div>
 
-      {/* Password */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-sm font-medium" style={{ color: "#c4d4cc" }}>
+        <label htmlFor="password" className="text-sm font-medium text-foreground/80">
           Mot de passe
         </label>
         <input
@@ -100,50 +93,27 @@ export function LoginView({ initialError, initialSuccess }: LoginViewProps) {
           autoComplete="current-password"
           disabled={loading}
           placeholder="••••••••"
-          className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-all focus:border-[#1eb854] disabled:opacity-50"
-          style={{
-            background: "#0e1810",
-            borderColor: "rgba(255,255,255,0.1)",
-            color: "#e8ede9",
-          }}
+          className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/50 focus:border-primary disabled:opacity-50"
         />
       </div>
 
-      {/* Inline error */}
       {error && (
-        <div
-          className="rounded-lg border px-3 py-2.5 text-sm"
-          style={{
-            background: "rgba(251,113,133,0.08)",
-            borderColor: "rgba(251,113,133,0.25)",
-            color: "#fb7185",
-          }}
-        >
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {/* Inline success */}
       {success && (
-        <div
-          className="rounded-lg border px-3 py-2.5 text-sm"
-          style={{
-            background: "rgba(30,184,84,0.08)",
-            borderColor: "rgba(30,184,84,0.25)",
-            color: "#1eb854",
-          }}
-        >
+        <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm text-primary">
           {success}
         </div>
       )}
 
-      {/* Buttons */}
       <div className="flex flex-col gap-2 pt-1">
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          style={{ background: "#1eb854", color: "#0a0f0d" }}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loadingAction === "login" && <Loader2 className="h-4 w-4 animate-spin" />}
           Se connecter
@@ -153,8 +123,7 @@ export function LoginView({ initialError, initialSuccess }: LoginViewProps) {
           type="button"
           disabled={loading}
           onClick={() => submit("/auth/signup")}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-semibold transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
-          style={{ borderColor: "rgba(255,255,255,0.15)", color: "#e8ede9" }}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loadingAction === "signup" && <Loader2 className="h-4 w-4 animate-spin" />}
           Créer un compte

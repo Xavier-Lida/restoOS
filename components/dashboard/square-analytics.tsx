@@ -31,13 +31,13 @@ export async function SquareAnalyticsSection({ userId, range }: SquareAnalyticsP
             <BarChart3Icon className="size-5" />
           </span>
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-medium">Importe ton rapport Square pour activer les graphiques</h2>
+            <h2 className="text-lg font-medium">Importe tes ventes pour activer les graphiques</h2>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Upload des CSV de récapitulatif des ventes Square pour visualiser l&apos;évolution de tes ventes.
+              Upload un CSV de ventes (Square, Lightspeed, Toast, etc.) pour visualiser l&apos;évolution de tes ventes.
             </p>
             <div className="pt-2">
               <Button asChild>
-                <Link href="/dashboard/integrations/square">Importer un CSV Square</Link>
+                <Link href="/dashboard/integrations/sales-csv">Importer un CSV</Link>
               </Button>
             </div>
           </div>

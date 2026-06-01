@@ -287,7 +287,7 @@ function parseItemizedFormat(content: string, fileName: string): ParsedSquareSum
   const headerMatch = findItemizedHeaderMatch(lines);
   if (headerMatch === null) {
     throw new Error(
-      "CSV article Square non reconnu: colonnes Date et montants (Ventes nettes / Prix brut / Ventes totales) introuvables.",
+      "CSV non reconnu: colonnes Date et montants (Ventes nettes / Prix brut / Ventes totales) introuvables.",
     );
   }
   const { headerLineIndex, delimiter, headers } = headerMatch;
@@ -304,7 +304,7 @@ function parseItemizedFormat(content: string, fileName: string): ParsedSquareSum
   const missingCore = dateIdx === null || (netIdx === null && grossIdx === null && totalIdx === null);
   if (missingCore) {
     throw new Error(
-      "CSV article Square non reconnu: colonnes Date et montants (Ventes nettes / Prix brut / Ventes totales) introuvables.",
+      "CSV non reconnu: colonnes Date et montants (Ventes nettes / Prix brut / Ventes totales) introuvables.",
     );
   }
 
@@ -405,12 +405,12 @@ function parseItemizedFormat(content: string, fileName: string): ParsedSquareSum
   });
 }
 
-export function parseSquareSalesCsv(content: string, fileName: string): ParsedSquareSummary[] {
+export function parseSalesCsv(content: string, fileName: string): ParsedSquareSummary[] {
   const bomStripped = content.replace(/^\uFEFF/gu, "");
   const format = detectSquareCsvFormat(bomStripped);
   if (format === null) {
     throw new Error(
-      "CSV Square non reconnu. Utilise soit le recapitulatif des ventes (deux colonnes label/valeur), soit l'export detaille des articles (colonnes Date, Ventes nettes, etc.).",
+      "CSV non reconnu. Utilise soit le recapitulatif des ventes (deux colonnes label/valeur), soit l'export detaille par article (colonnes Date, Ventes nettes, etc.).",
     );
   }
   const parseByFormat: Record<SquareCsvFormat, () => ParsedSquareSummary[]> = {
@@ -419,3 +419,6 @@ export function parseSquareSalesCsv(content: string, fileName: string): ParsedSq
   };
   return parseByFormat[format]();
 }
+
+/** @deprecated Use parseSalesCsv */
+export const parseSquareSalesCsv = parseSalesCsv;

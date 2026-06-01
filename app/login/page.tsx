@@ -29,12 +29,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = (await searchParams) ?? {};
 
   return (
-    <div
-      className="flex min-h-screen flex-col items-center justify-center px-4 py-16"
-      style={{ background: "#0f1910" }}
-    >
-      {/* Logo */}
-      <Link href="/">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-16">
+      <Link href="/" className="mb-8">
         <Image
           src="/logo/restoOS-logo-transparent-2400.png"
           alt="RestoOs"
@@ -44,20 +40,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         />
       </Link>
 
-      {/* Card */}
-      <div
-        className="w-full max-w-sm rounded-2xl border p-8 shadow-2xl"
-        style={{ background: "#131f18", borderColor: "rgba(255,255,255,0.08)" }}
-      >
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-2xl">
         <div className="mb-6 flex flex-col gap-1">
-          <h1 className="text-xl font-bold" style={{ color: "#ffffff" }}>
-            Bienvenue
-          </h1>
-          <p className="text-sm" style={{ color: "#9cb0a5" }}>
-            Connectez-vous à votre espace RestoOs.
-          </p>
+          <h1 className="text-xl font-bold text-foreground">Bienvenue</h1>
+          <p className="text-sm text-muted-foreground">Connectez-vous à votre espace RestoOs.</p>
         </div>
-
         <LoginView initialError={params.error} initialSuccess={params.success} />
       </div>
     </div>
